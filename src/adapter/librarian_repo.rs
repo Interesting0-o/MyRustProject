@@ -1,9 +1,6 @@
 //! 管理员仓储接口。
 
-use crate::{
-    Librarian,
-    schema::librarian::{AddLibrarianError, UpdateLibrarianError},
-};
+use crate::{AddLibrarianError, Librarian, UpdateLibrarianError};
 
 /// 管理员仓储：定义 [`Librarian`] 的读写操作。
 ///

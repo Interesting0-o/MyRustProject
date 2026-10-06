@@ -1,9 +1,6 @@
 //! 图书仓储接口。
 
-use crate::{
-    Book,
-    schema::book::{AddBookError, UpdateBookError},
-};
+use crate::{AddBookError, Book, UpdateBookError};
 
 /// 图书仓储：定义 [`Book`] 的读写操作。
 ///
@@ -31,7 +28,8 @@ pub trait BookRepository {
     ///
     /// # 错误
     ///
-    /// 当 `bid` 不存在时返回 [`UpdateBookError::NonExistedBID`]。
+    /// 当 `bid` 不存在时返回 [`UpdateBookError::NonExistedBID`]，
+    /// 持久化实现写盘失败时返回 [`UpdateBookError::IoError`]。
     fn update(&mut self, book: Book) -> Result<(), UpdateBookError>;
 
     /// 返回仓储内的图书条目数，即不同 `bid` 的图书种数。

@@ -1,6 +1,6 @@
 //! 借阅记录仓储接口。
 
-use crate::{BorrowRecord, schema::borrow_record::RemoveBorrowRecordError};
+use crate::{BorrowRecord, RemoveBorrowRecordError};
 
 /// 借阅记录仓储：定义 [`BorrowRecord`] 的读写操作。
 ///

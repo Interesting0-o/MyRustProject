@@ -1,9 +1,6 @@
 //! 读者仓储接口。
 
-use crate::{
-    Reader,
-    schema::reader::{AddReaderError, UpdateReaderError},
-};
+use crate::{AddReaderError, Reader, UpdateReaderError};
 
 /// 读者仓储：定义 [`Reader`] 的读写操作。
 ///
