@@ -3,9 +3,7 @@
 use std::io;
 
 use book_manager::{
-    Librarian, Reader,
-    adapter::{librarian_repo::LibrarianRepository, reader_repo::ReaderRepository},
-    service::login::{librarian_login, reader_login},
+    Librarian, LibrarianRepository, Reader, ReaderRepository, librarian_login, reader_login,
 };
 
 /// `login` 的结果：登录成功后的当前用户、用户选择注册，或用户选择退出。

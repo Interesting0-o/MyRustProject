@@ -3,12 +3,8 @@
 use std::io;
 
 use book_manager::{
-    Reader,
-    adapter::{book_repo::BookRepository, borrow_record_repo::BorrowRecordRepository},
-    service::{
-        borrow_book::{BorrowBookError, borrow_book},
-        return_book::{ReturnBookError, return_book},
-    },
+    BookRepository, BorrowBookError, BorrowRecordRepository, Reader, ReturnBookError, borrow_book,
+    return_book,
 };
 
 /// 读者菜单主循环：只负责打印菜单、读选择、分发到具体流程。
@@ -80,12 +76,13 @@ where
     println!("书籍搜索结果如下:");
     for (idx, book) in qurry_res.iter().enumerate() {
         println!(
-            "{}. {}\n- 书籍编号:{}\n- 剩余数量:{}\n- 单价:{}",
+            "{}. {}\n- 书籍编号:{}\n- 剩余数量:{}\n- 单价:{}.{:02}",
             idx + 1,
             book.name,
             book.bid,
             book.num,
-            book.price
+            book.price / 100,
+            book.price % 100
         );
     }
 
