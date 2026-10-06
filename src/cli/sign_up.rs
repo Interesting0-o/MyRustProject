@@ -1,8 +1,7 @@
 use std::io;
 
 use book_manager::{
-    adapter::{librarian_repo::LibrarianRepository, reader_repo::ReaderRepository},
-    service::sign_up::{SignUpRes, librarian_sign_up, reader_sign_up},
+    LibrarianRepository, ReaderRepository, SignUpRes, librarian_sign_up, reader_sign_up,
 };
 
 pub fn sign_up<R, L>(reader_repo: &mut R, librarian_repo: &mut L)
