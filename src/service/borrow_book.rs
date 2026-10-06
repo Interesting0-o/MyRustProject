@@ -1,7 +1,4 @@
-use crate::{
-    Book,
-    adapter::{book_repo::BookRepository, borrow_record_repo::BorrowRecordRepository},
-};
+use crate::{Book, BookRepository, BorrowRecordRepository};
 pub enum BorrowBookError {
     NonExistBID,
     BookNumIsZero,

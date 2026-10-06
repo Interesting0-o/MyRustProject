@@ -1,7 +1,5 @@
 use crate::{
-    Librarian, Reader,
-    adapter::{librarian_repo::LibrarianRepository, reader_repo::ReaderRepository},
-    schema::{librarian::AddLibrarianError, reader::AddReaderError},
+    AddLibrarianError, AddReaderError, Librarian, LibrarianRepository, Reader, ReaderRepository,
     service::login::str_hash,
 };
 

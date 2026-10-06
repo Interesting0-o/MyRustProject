@@ -1,7 +1,4 @@
-use crate::{
-    Librarian, Reader,
-    adapter::{librarian_repo::LibrarianRepository, reader_repo::ReaderRepository},
-};
+use crate::{Librarian, LibrarianRepository, Reader, ReaderRepository};
 
 pub enum LoginError {
     AccountNotFound,
