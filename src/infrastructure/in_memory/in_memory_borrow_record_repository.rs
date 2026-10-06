@@ -1,9 +1,6 @@
 //! [`BorrowRecordRepository`] 的内存实现。
 
-use crate::{
-    BorrowRecord, adapter::borrow_record_repo::BorrowRecordRepository,
-    schema::borrow_record::RemoveBorrowRecordError,
-};
+use crate::{BorrowRecord, BorrowRecordRepository, RemoveBorrowRecordError};
 
 /// 基于 `Vec` 的借阅记录仓储，数据仅保存在进程内存中，重启即丢失。
 ///

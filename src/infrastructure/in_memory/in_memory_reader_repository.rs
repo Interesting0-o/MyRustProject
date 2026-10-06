@@ -1,24 +1,18 @@
 //! [`ReaderRepository`] 的内存实现。
 
-use crate::{
-    Reader,
-    adapter::reader_repo::ReaderRepository,
-    schema::reader::{AddReaderError, UpdateReaderError},
-};
+use crate::{AddReaderError, Reader, ReaderRepository, UpdateReaderError};
 
 /// 基于 `Vec` 的读者仓储，数据仅保存在进程内存中，重启即丢失。
 ///
 /// 所有查找均为线性扫描（O(n)），适用于数据量小的场景。
 pub struct InMemoryReaderRepository {
     readers: Vec<Reader>,
-    pk_record: usize,
 }
 
 impl ReaderRepository for InMemoryReaderRepository {
     fn new() -> Self {
         Self {
             readers: Vec::new(),
-            pk_record: 0,
         }
     }
     /// 先扫描 `account` 是否已被占用，没有才追加到末尾。

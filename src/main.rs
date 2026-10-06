@@ -24,7 +24,7 @@ fn main() {
                 reader_contrl(&mut repos.book, &mut repos.borrow_record, &cur_reader);
             }
             LoginResult::LibrarianUser(_) => {
-                librarian_contrl();
+                librarian_contrl(&mut repos.book);
             }
         }
     }

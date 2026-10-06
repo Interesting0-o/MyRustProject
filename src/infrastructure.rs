@@ -1,4 +1,5 @@
-pub mod in_memory_book_repository;
-pub mod in_memory_borrow_record_repository;
-pub mod in_memory_librarian_repository;
-pub mod in_memory_reader_repository;
+//基于内存管理的仓库
+pub mod in_memory;
+
+//基于txt读取的仓库
+pub mod txt_base;

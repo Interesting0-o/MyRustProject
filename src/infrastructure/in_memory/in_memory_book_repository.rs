@@ -1,10 +1,6 @@
 //! [`BookRepository`] 的内存实现。
 
-use crate::{
-    Book,
-    adapter::book_repo::BookRepository,
-    schema::book::{AddBookError, UpdateBookError},
-};
+use crate::{AddBookError, Book, BookRepository, UpdateBookError};
 
 /// 基于 `Vec` 的图书仓储，数据仅保存在进程内存中，重启即丢失。
 ///

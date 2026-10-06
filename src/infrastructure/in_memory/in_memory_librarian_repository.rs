@@ -1,24 +1,18 @@
 //! [`LibrarianRepository`] 的内存实现。
 
-use crate::{
-    Librarian,
-    adapter::librarian_repo::LibrarianRepository,
-    schema::librarian::{AddLibrarianError, UpdateLibrarianError},
-};
+use crate::{AddLibrarianError, Librarian, LibrarianRepository, UpdateLibrarianError};
 
 /// 基于 `Vec` 的管理员仓储，数据仅保存在进程内存中，重启即丢失。
 ///
 /// 所有查找均为线性扫描（O(n)），适用于数据量小的场景。
 pub struct InMemoryLibrarianRepository {
     librarians: Vec<Librarian>,
-    pk_record: usize,
 }
 
 impl LibrarianRepository for InMemoryLibrarianRepository {
     fn new() -> Self {
         Self {
             librarians: Vec::new(),
-            pk_record: 0,
         }
     }
     /// 先扫描 `account` 是否已被占用，没有才追加到末尾。

@@ -5,21 +5,9 @@
 //! 破坏分层方向。二进制本身是组装根，可以同时依赖两边。
 
 use book_manager::{
-    Book,
-    adapter::{
-        book_repo::BookRepository, borrow_record_repo::BorrowRecordRepository,
-        librarian_repo::LibrarianRepository, reader_repo::ReaderRepository,
-    },
-    infrastructure::{
-        in_memory_book_repository::InMemoryBookRepository,
-        in_memory_borrow_record_repository::InMemoryBorrowRecordRepository,
-        in_memory_librarian_repository::InMemoryLibrarianRepository,
-        in_memory_reader_repository::InMemoryReaderRepository,
-    },
-    service::{
-        borrow_book::borrow_book,
-        sign_up::{librarian_sign_up, reader_sign_up},
-    },
+    Book, BookRepository, BorrowRecordRepository, InMemoryBookRepository,
+    InMemoryBorrowRecordRepository, InMemoryLibrarianRepository, InMemoryReaderRepository,
+    LibrarianRepository, ReaderRepository, borrow_book, librarian_sign_up, reader_sign_up,
 };
 
 /// 一组已填入演示数据的仓储，供 `main` 直接使用。
