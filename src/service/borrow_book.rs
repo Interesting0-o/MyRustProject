@@ -1,7 +1,9 @@
-use crate::{Book, BookRepository, BorrowRecordRepository};
+use crate::{Book, BookRepository, BorrowRecordRepository, FindBookError};
 pub enum BorrowBookError {
     NonExistBID,
     BookNumIsZero,
+    /// 查询图书仓储失败（锁中毒、读取持久化数据出错等）。
+    RepositoryError(FindBookError),
 }
 
 pub fn borrow_book<B, BR>(
@@ -15,7 +17,7 @@ where
     BR: BorrowRecordRepository,
 {
     match book_repo.find_book_by_bid(bid) {
-        Some(book) => {
+        Ok(book) => {
             if book.num == 0 {
                 Err(BorrowBookError::BookNumIsZero)
             } else {
@@ -31,6 +33,7 @@ where
                 Ok(())
             }
         }
-        None => Err(BorrowBookError::NonExistBID),
+        Err(FindBookError::NoResult) => Err(BorrowBookError::NonExistBID),
+        Err(e) => Err(BorrowBookError::RepositoryError(e)),
     }
 }

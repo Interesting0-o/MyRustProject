@@ -1,8 +1,13 @@
-use crate::{Librarian, LibrarianRepository, Reader, ReaderRepository};
+use crate::{
+    Librarian, LibrarianRepository, Reader, ReaderRepository,
+    adapter::{librarian_repo::FindLibrarianError, reader_repo::FindReaderError},
+};
 
 pub enum LoginError {
     AccountNotFound,
     PasswordError,
+    /// 查询仓储失败（锁中毒等）。
+    RepositoryError,
 }
 
 pub fn reader_login<R: ReaderRepository>(
@@ -10,14 +15,11 @@ pub fn reader_login<R: ReaderRepository>(
     account: &str,
     pwd: &str,
 ) -> Result<Reader, LoginError> {
-    if let Some(r) = reader_repo.find_reader_by_account(account) {
-        if r.hash_pwd == str_hash(pwd) {
-            Ok(r)
-        } else {
-            Err(LoginError::PasswordError)
-        }
-    } else {
-        Err(LoginError::AccountNotFound)
+    match reader_repo.find_reader_by_account(account) {
+        Ok(r) if r.hash_pwd == str_hash(pwd) => Ok(r),
+        Ok(_) => Err(LoginError::PasswordError),
+        Err(FindReaderError::NoResult) => Err(LoginError::AccountNotFound),
+        Err(FindReaderError::RepositoryLockError) => Err(LoginError::RepositoryError),
     }
 }
 
@@ -26,14 +28,11 @@ pub fn librarian_login<L: LibrarianRepository>(
     account: &str,
     pwd: &str,
 ) -> Result<Librarian, LoginError> {
-    if let Some(l) = librarian_repo.find_librarian_by_account(account) {
-        if l.hash_pwd == str_hash(pwd) {
-            Ok(l)
-        } else {
-            Err(LoginError::PasswordError)
-        }
-    } else {
-        Err(LoginError::AccountNotFound)
+    match librarian_repo.find_librarian_by_account(account) {
+        Ok(l) if l.hash_pwd == str_hash(pwd) => Ok(l),
+        Ok(_) => Err(LoginError::PasswordError),
+        Err(FindLibrarianError::NoResult) => Err(LoginError::AccountNotFound),
+        Err(FindLibrarianError::RepositoryLockError) => Err(LoginError::RepositoryError),
     }
 }
 

@@ -1,8 +1,10 @@
-use crate::{Book, BookRepository, BorrowRecordRepository};
+use crate::{Book, BookRepository, BorrowRecordRepository, FindBookError};
 
 pub enum ReturnBookError {
     NonExistBID,
     NotFoundRecord,
+    /// 查询图书仓储失败（锁中毒、读取持久化数据出错等）。
+    RepositoryError(FindBookError),
 }
 
 pub fn return_book<B, BR>(
@@ -16,7 +18,7 @@ where
     BR: BorrowRecordRepository,
 {
     match book_repo.find_book_by_bid(bid) {
-        Some(_) => {
+        Ok(_) => {
             if let Some(br) = borrow_record_repo
                 .find_records_by_bid(bid)
                 .iter()
@@ -24,7 +26,7 @@ where
             {
                 let book = book_repo
                     .find_book_by_bid(&br.bid)
-                    .expect("book 刚由 bid 查到，必然存在");
+                    .map_err(ReturnBookError::RepositoryError)?;
                 let res = Book {
                     num: book.num + 1,
                     ..book
@@ -40,6 +42,7 @@ where
                 Err(ReturnBookError::NotFoundRecord)
             }
         }
-        None => Err(ReturnBookError::NonExistBID),
+        Err(FindBookError::NoResult) => Err(ReturnBookError::NonExistBID),
+        Err(e) => Err(ReturnBookError::RepositoryError(e)),
     }
 }

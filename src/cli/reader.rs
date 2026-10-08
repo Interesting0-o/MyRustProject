@@ -65,7 +65,10 @@ where
 
     //find_book_by_name 返回拥有所有权的 Vec，查询结果不再借用 book_repo，
     //这样后面借书时才能可变借用 book_repo
-    let qurry_res = book_repo.find_book_by_name(book_name);
+    let Ok(qurry_res) = book_repo.find_book_by_name(book_name) else {
+        println!("查询图书失败，请稍后重试");
+        return;
+    };
 
     //判断是否有查询结果
     if qurry_res.is_empty() {
@@ -108,6 +111,7 @@ where
             Err(BorrowBookError::NonExistBID) => {
                 unreachable!("bid 刚由同一 book_repo 查出，不可能不存在")
             }
+            Err(BorrowBookError::RepositoryError(_)) => println!("查询图书失败，请稍后重试"),
         }
     }
 }
@@ -150,6 +154,7 @@ where
             Err(ReturnBookError::NonExistBID) => {
                 unreachable!("借阅记录指向的图书不可能不存在")
             }
+            Err(ReturnBookError::RepositoryError(_)) => println!("查询图书失败，请稍后重试"),
         }
     }
 }

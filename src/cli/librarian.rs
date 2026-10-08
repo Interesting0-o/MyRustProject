@@ -2,7 +2,7 @@
 
 use std::io;
 
-use book_manager::{AddBookError, Book, BookRepository, UpdateBookError};
+use book_manager::{AddBookError, Book, BookRepository, FindBookError, UpdateBookError};
 
 /// 管理员菜单主循环：只负责打印菜单、读选择、分发到具体流程。
 pub fn librarian_contrl<B>(book_repo: &mut B)
@@ -31,7 +31,10 @@ where
     B: BookRepository,
 {
     let book_name = read_line("请输入书籍名称:");
-    let query_res = book_repo.find_book_by_name(&book_name);
+    let Ok(query_res) = book_repo.find_book_by_name(&book_name) else {
+        println!("查询图书失败，请稍后重试");
+        return;
+    };
 
     if query_res.is_empty() {
         println!("无搜索结果");
@@ -76,6 +79,7 @@ where
         //bid 是主键，重复时 add 会拒绝，不能覆盖已有图书
         Err(AddBookError::BIDAlreadyExists) => println!("书籍编号已存在，添加失败!"),
         Err(AddBookError::IoError(e)) => println!("图书添加失败，写入文件出错: {e}"),
+        Err(AddBookError::RepositoryLockError) => println!("错误的写入时机"),
     }
 }
 
@@ -87,9 +91,16 @@ where
     let book_bid = read_line("请输入要变更数目的书籍编号:");
 
     //先取出克隆副本，展示当前数量；确认后再整体写回
-    let Some(mut book) = book_repo.find_book_by_bid(&book_bid) else {
-        println!("未找到该编号的图书");
-        return;
+    let mut book = match book_repo.find_book_by_bid(&book_bid) {
+        Ok(book) => book,
+        Err(FindBookError::NoResult) => {
+            println!("未找到该编号的图书");
+            return;
+        }
+        Err(_) => {
+            println!("查询图书失败，请稍后重试");
+            return;
+        }
     };
     println!("当前《{}》剩余数量:{}", book.name, book.num);
 
@@ -102,6 +113,7 @@ where
             unreachable!("bid 刚由同一 book_repo 查出，不可能不存在")
         }
         Err(UpdateBookError::IoError(e)) => println!("变更失败，写入文件出错: {e}"),
+        Err(UpdateBookError::RepositoryLockError) => println!("错误的写入时机"),
     }
 }
 
