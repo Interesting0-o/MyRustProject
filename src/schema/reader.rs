@@ -5,11 +5,3 @@ pub struct Reader {
     pub hash_pwd: u64,
     pub name: String,
 }
-
-pub enum AddReaderError {
-    AccountAlreadyExists,
-}
-
-pub enum UpdateReaderError {
-    NonExistedAccount,
-}

@@ -1,13 +1,19 @@
 //! 借阅记录仓储接口。
 
-use crate::{BorrowRecord, RemoveBorrowRecordError};
+use crate::BorrowRecord;
+
+#[derive(Debug)]
+pub enum RemoveBorrowRecordError {
+    NonExistedBRID,
+}
 
 /// 借阅记录仓储：定义 [`BorrowRecord`] 的读写操作。
 ///
 /// 记录一经创建就不再修改，因此没有 `update`：借书时 [`add`](Self::add)，
 /// 还书时 [`remove`](Self::remove)。所有实现都应保证 `br_id` 唯一。
+///
+/// 构造不属于本契约：各实现的构造方式不同，由实现自行提供。
 pub trait BorrowRecordRepository {
-    fn new() -> Self;
     /// 新增一条借阅记录，返回新记录的编号 `br_id`。
     ///
     /// `br_id` 由实现自行生成并保证唯一（内存实现使用自增计数器），调用方无需
@@ -32,9 +38,4 @@ pub trait BorrowRecordRepository {
 
     /// 查出某位读者当前的所有借阅记录；没有时返回空 `Vec`。
     fn find_records_by_account(&self, account: &str) -> Vec<BorrowRecord>;
-
-    /// 返回仓储内的借阅记录条数。
-    ///
-    /// 一条记录代表一册在借图书，因此这也等于当前借出的总册数。
-    fn get_len(&self) -> usize;
 }

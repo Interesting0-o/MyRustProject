@@ -9,8 +9,3 @@ pub struct BorrowRecord {
     pub bid: String,
     pub account: String,
 }
-
-#[derive(Debug)]
-pub enum RemoveBorrowRecordError {
-    NonExistedBRID,
-}

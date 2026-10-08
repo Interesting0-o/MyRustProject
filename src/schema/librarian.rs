@@ -5,11 +5,3 @@ pub struct Librarian {
     pub hash_pwd: u64,
     pub name: String,
 }
-
-pub enum AddLibrarianError {
-    AccountAlreadyExists,
-}
-
-pub enum UpdateLibrarianError {
-    NonExistedAccount,
-}

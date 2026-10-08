@@ -20,18 +20,14 @@ pub mod service;
 pub mod utils;
 
 // ---- 领域类型 ----
-pub use crate::schema::{
-    Book, BorrowRecord, Librarian, Reader,
-    book::{AddBookError, UpdateBookError},
-    borrow_record::RemoveBorrowRecordError,
-    librarian::{AddLibrarianError, UpdateLibrarianError},
-    reader::{AddReaderError, UpdateReaderError},
-};
+pub use crate::schema::{Book, BorrowRecord, Librarian, Reader};
 
 // ---- 仓储抽象：业务层只依赖这些 trait，不关心具体实现 ----
 pub use crate::adapter::{
-    book_repo::BookRepository, borrow_record_repo::BorrowRecordRepository,
-    librarian_repo::LibrarianRepository, reader_repo::ReaderRepository,
+    book_repo::{AddBookError, BookRepository, FindBookError, UpdateBookError},
+    borrow_record_repo::{BorrowRecordRepository, RemoveBorrowRecordError},
+    librarian_repo::{AddLibrarianError, LibrarianRepository, UpdateLibrarianError},
+    reader_repo::{AddReaderError, ReaderRepository, UpdateReaderError},
 };
 
 // ---- 业务用例 ----
@@ -54,5 +50,5 @@ pub use crate::infrastructure::in_memory::{
 
 // txt 实现：数据落盘到 resource/*.txt
 pub use crate::infrastructure::txt_base::{
-    txt_base_book_repo::TXTBaseBookRepository, txt_base_reader_repo::TXTBaseReaderRepository,
+    txt_base_book_repo::TxtBaseBookRepository, txt_base_reader_repo::TXTBaseReaderRepository,
 };
