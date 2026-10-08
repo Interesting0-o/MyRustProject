@@ -1,56 +1,75 @@
-//! [`BookRepository`] 的内存实现。
+use crate::{AddBookError, Book, BookRepository, FindBookError, UpdateBookError};
+use std::sync::RwLock;
 
-use crate::{AddBookError, Book, BookRepository, UpdateBookError};
-
-/// 基于 `Vec` 的图书仓储，数据仅保存在进程内存中，重启即丢失。
-///
-/// 所有查找均为线性扫描（O(n)），适用于数据量小的场景。
 pub struct InMemoryBookRepository {
-    books: Vec<Book>,
+    books: RwLock<Vec<Book>>,
 }
 
+impl InMemoryBookRepository {
+    pub fn new() -> Self {
+        Self {
+            books: RwLock::new(Vec::new()),
+        }
+    }
+}
+impl Default for InMemoryBookRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl BookRepository for InMemoryBookRepository {
-    fn new() -> Self {
-        Self { books: Vec::new() }
-    }
-
-    /// 先扫描是否已存在相同 `bid`，不存在才追加到末尾。
-    fn add(&mut self, book: Book) -> Result<(), AddBookError> {
-        match self.books.iter().position(|b| b.bid == book.bid) {
-            Some(_) => Err(AddBookError::BIDAlreadyExists),
-            None => {
-                self.books.push(book);
-                Ok(())
-            }
+    fn add(&self, book: Book) -> Result<(), AddBookError> {
+        let mut books = self
+            .books
+            .write()
+            .map_err(|_| AddBookError::RepositoryLockError)?;
+        if books.iter().any(|b| b.bid == book.bid) {
+            Err(AddBookError::BIDAlreadyExists)
+        } else {
+            books.push(book);
+            Ok(())
         }
     }
 
-    /// 按 `bid` 找到对应元素后整体覆盖。
-    fn update(&mut self, book: Book) -> Result<(), UpdateBookError> {
-        match self.books.iter_mut().find(|b| b.bid == book.bid) {
-            Some(b) => {
-                *b = book;
-                Ok(())
-            }
-            None => Err(UpdateBookError::NonExistedBID),
+    fn update(&self, book: Book) -> Result<(), UpdateBookError> {
+        let mut books = self
+            .books
+            .write()
+            .map_err(|_| UpdateBookError::RepositoryLockError)?;
+        if let Some(b) = books.iter_mut().find(|b| b.bid == book.bid) {
+            *b = book;
+            Ok(())
+        } else {
+            Err(UpdateBookError::NonExistedBID)
         }
     }
 
-    /// 返回命中图书的克隆副本，调用方修改不会影响仓储内部数据。
-    fn find_book_by_bid(&self, bid: &str) -> Option<Book> {
-        self.books.iter().find(|book| book.bid == bid).cloned()
+    fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError> {
+        let books = self
+            .books
+            .read()
+            .map_err(|_| FindBookError::RepositoryLockError)?;
+        if let Some(book) = books.iter().find(|book| book.bid == bid).cloned() {
+            Ok(book)
+        } else {
+            Err(FindBookError::NoResult)
+        }
     }
 
-    /// 收集所有书名完全匹配的图书，结果为克隆副本。
-    fn find_book_by_name(&self, name: &str) -> Vec<Book> {
-        self.books
+    fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, FindBookError> {
+        let books = self
+            .books
+            .read()
+            .map_err(|_| FindBookError::RepositoryLockError)?;
+        let query_res: Vec<Book> = books
             .iter()
             .filter(|book| book.name == name)
             .cloned()
-            .collect()
-    }
-
-    fn get_len(&self) -> usize {
-        self.books.len()
+            .collect();
+        if query_res.is_empty() {
+            Err(FindBookError::NoResult)
+        } else {
+            Ok(query_res)
+        }
     }
 }

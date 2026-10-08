@@ -10,14 +10,17 @@ pub struct InMemoryBorrowRecordRepository {
     pk_record: u64,
 }
 
-impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
-    fn new() -> Self {
+impl InMemoryBorrowRecordRepository {
+    /// 构造一个空仓储。构造不属于 [`BorrowRecordRepository`] 契约。
+    pub fn new() -> Self {
         Self {
             records: Vec::new(),
             pk_record: 0,
         }
     }
+}
 
+impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
     fn add(&mut self, account: &str, bid: &str) -> String {
         self.pk_record += 1;
         let br_id = format!("BR_{}", self.pk_record);
@@ -62,9 +65,5 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
             .filter(|r| r.account == account)
             .cloned()
             .collect()
-    }
-
-    fn get_len(&self) -> usize {
-        self.records.len()
     }
 }
