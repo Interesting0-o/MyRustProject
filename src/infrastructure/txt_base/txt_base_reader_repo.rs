@@ -1,5 +1,6 @@
 use crate::{
-    Reader, ReaderRepository,
+    AddReaderError, Reader, ReaderRepository, UpdateReaderError,
+    adapter::reader_repo::FindReaderError,
     utils::{formatter::format_reader_for_storage, generator::generator_reader_from_str},
 };
 use std::{
@@ -14,23 +15,10 @@ pub struct TXTBaseReaderRepository {
 const READERS_PATH: &str = "resource/readers.txt";
 
 impl TXTBaseReaderRepository {
-    /// 把内存里的全部读者信息原子地写回文件。
+    /// 构造仓储，并把 `resource/readers.txt` 里已有的读者读进来。
     ///
-    /// 先写同目录下的临时文件，`sync_all` 落盘后再 `rename` 覆盖正式文件：
-    /// 中途失败或崩溃时正式文件保持旧内容，不会留下半截数据。
-    fn persist(&self) -> std::io::Result<()> {
-        let tmp_path = format!("{READERS_PATH}.tmp");
-        let mut file = File::create(&tmp_path)?;
-        for reader in &self.readers {
-            writeln!(file, "{}", format_reader_for_storage(reader))?;
-        }
-        file.sync_all()?;
-        fs::rename(&tmp_path, READERS_PATH)
-    }
-}
-
-impl ReaderRepository for TXTBaseReaderRepository {
-    fn new() -> Self {
+    /// 构造不属于 [`ReaderRepository`] 契约，由各个实现自行提供。
+    pub fn new() -> Self {
         let file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -50,22 +38,33 @@ impl ReaderRepository for TXTBaseReaderRepository {
         }
     }
 
-    fn add(&mut self, _reader: Reader) -> Result<(), crate::AddReaderError> {
+    /// 把内存里的全部读者信息原子地写回文件。
+    ///
+    /// 先写同目录下的临时文件，`sync_all` 落盘后再 `rename` 覆盖正式文件：
+    /// 中途失败或崩溃时正式文件保持旧内容，不会留下半截数据。
+    fn persist(&self) -> std::io::Result<()> {
+        let tmp_path = format!("{READERS_PATH}.tmp");
+        let mut file = File::create(&tmp_path)?;
+        for reader in &self.readers {
+            writeln!(file, "{}", format_reader_for_storage(reader))?;
+        }
+        file.sync_all()?;
+        fs::rename(&tmp_path, READERS_PATH)
+    }
+}
+
+impl ReaderRepository for TXTBaseReaderRepository {
+    fn add(&self, _reader: Reader) -> Result<(), AddReaderError> {
         todo!();
     }
 
-    fn update(&mut self, _reader: Reader) -> Result<(), crate::UpdateReaderError> {
+    fn update(&self, _reader: Reader) -> Result<(), UpdateReaderError> {
         todo!();
     }
-    fn get_len(&self) -> usize {
+    fn find_reader_by_name(&self, _name: &str) -> Result<Vec<Reader>, FindReaderError> {
         todo!();
     }
-
-    fn find_reader_by_name(&self, _name: &str) -> Vec<Reader> {
-        todo!();
-    }
-
-    fn find_reader_by_account(&self, _account: &str) -> Option<Reader> {
+    fn find_reader_by_account(&self, _account: &str) -> Result<Reader, FindReaderError> {
         todo!();
     }
 }
