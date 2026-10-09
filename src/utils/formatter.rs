@@ -1,4 +1,4 @@
-use crate::{Book, Librarian, Reader};
+use crate::{Book, BorrowRecord, Librarian, Reader};
 
 ///用于txt存储的字符串格式化工具
 ///参数为一个Book的借用
@@ -28,5 +28,14 @@ pub fn format_librarian_for_storage(librarian: &Librarian) -> String {
         name = librarian.name,
         account = librarian.account,
         hash_pwd = librarian.hash_pwd
+    )
+}
+
+pub fn format_borrow_record_for_storage(record: &BorrowRecord) -> String {
+    format!(
+        "{br_id}|{account}|{bid}",
+        br_id = record.br_id,
+        account = record.account,
+        bid = record.bid,
     )
 }

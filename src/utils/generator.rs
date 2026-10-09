@@ -1,4 +1,4 @@
-use crate::{Book, Librarian, Reader};
+use crate::{Book, BorrowRecord, Librarian, Reader};
 
 pub enum GeneratorError {
     WrongParamType,
@@ -55,5 +55,16 @@ pub fn generator_librarian_from_str(s: &str) -> Result<Librarian, GeneratorError
         account: account.to_string(),
         name: name.to_string(),
         hash_pwd,
+    })
+}
+pub fn generator_borrow_record_from_str(s: &str) -> Result<BorrowRecord, GeneratorError> {
+    let args: Vec<&str> = s.split('|').collect();
+    let [br_id, account, bid] = args.as_slice() else {
+        return Err(GeneratorError::WrongStrSplite);
+    };
+    Ok(BorrowRecord {
+        br_id: br_id.to_string(),
+        account: account.to_string(),
+        bid: bid.to_string(),
     })
 }
