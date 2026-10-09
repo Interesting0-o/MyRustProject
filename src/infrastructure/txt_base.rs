@@ -1,6 +1,7 @@
 //! 基于 txt 文件的仓储实现：数据落盘到 `resource/*.txt`。
 
 pub mod txt_base_book_repo;
+pub mod txt_base_librarian_repo;
 pub mod txt_base_reader_repo;
 
 /// 所有 txt 仓储共用的构造错误。

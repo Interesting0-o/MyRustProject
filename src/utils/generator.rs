@@ -1,4 +1,4 @@
-use crate::{Book, Reader};
+use crate::{Book, Librarian, Reader};
 
 pub enum GeneratorError {
     WrongParamType,
@@ -36,6 +36,22 @@ pub fn generator_reader_from_str(s: &str) -> Result<Reader, GeneratorError> {
         .parse::<u64>()
         .map_err(|_| GeneratorError::WrongParamType)?;
     Ok(Reader {
+        account: account.to_string(),
+        name: name.to_string(),
+        hash_pwd,
+    })
+}
+
+pub fn generator_librarian_from_str(s: &str) -> Result<Librarian, GeneratorError> {
+    let args: Vec<&str> = s.split('|').collect();
+    let [name, account, hash_pwd] = args.as_slice() else {
+        return Err(GeneratorError::WrongStrSplite);
+    };
+
+    let hash_pwd = hash_pwd
+        .parse::<u64>()
+        .map_err(|_| GeneratorError::WrongParamType)?;
+    Ok(Librarian {
         account: account.to_string(),
         name: name.to_string(),
         hash_pwd,
