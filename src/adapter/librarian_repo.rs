@@ -5,11 +5,13 @@ use crate::Librarian;
 pub enum AddLibrarianError {
     AccountAlreadyExists,
     RepositoryLockError,
+    IOError(std::io::Error),
 }
 
 pub enum UpdateLibrarianError {
     NonExistedAccount,
     RepositoryLockError,
+    IOError(std::io::Error),
 }
 
 pub enum FindLibrarianError {

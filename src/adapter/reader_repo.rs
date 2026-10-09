@@ -5,11 +5,13 @@ use crate::Reader;
 pub enum AddReaderError {
     AccountAlreadyExists,
     RepositoryLockError,
+    IOError(std::io::Error),
 }
 
 pub enum UpdateReaderError {
     NonExistedAccount,
     RepositoryLockError,
+    IOError(std::io::Error),
 }
 pub enum FindReaderError {
     NoResult,

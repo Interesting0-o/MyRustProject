@@ -26,8 +26,10 @@ pub use crate::schema::{Book, BorrowRecord, Librarian, Reader};
 pub use crate::adapter::{
     book_repo::{AddBookError, BookRepository, FindBookError, UpdateBookError},
     borrow_record_repo::{BorrowRecordRepository, RemoveBorrowRecordError},
-    librarian_repo::{AddLibrarianError, LibrarianRepository, UpdateLibrarianError},
-    reader_repo::{AddReaderError, ReaderRepository, UpdateReaderError},
+    librarian_repo::{
+        AddLibrarianError, FindLibrarianError, LibrarianRepository, UpdateLibrarianError,
+    },
+    reader_repo::{AddReaderError, FindReaderError, ReaderRepository, UpdateReaderError},
 };
 
 // ---- 业务用例 ----
