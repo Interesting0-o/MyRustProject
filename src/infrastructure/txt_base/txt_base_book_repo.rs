@@ -1,5 +1,5 @@
 use crate::{
-    AddBookError, Book, BookRepository,
+    AddBookError, Book, BookRepository, FindBookError, UpdateBookError,
     utils::{formatter::format_book_for_storage, generator::generator_book_from_str},
 };
 use std::io::Write;
@@ -41,16 +41,6 @@ impl TxtBaseBookRepository {
             repo_path: path.to_string(),
         })
     }
-    fn persist(&self) -> std::io::Result<()> {
-        let tmp_path = format!("{}.tmp", self.repo_path);
-        let mut file = File::create(&tmp_path)?;
-        let books = self.books.write().unwrap();
-        for book in books.iter() {
-            writeln!(file, "{}", format_book_for_storage(book))?;
-        }
-        file.sync_all()?;
-        fs::rename(&tmp_path, &self.repo_path)
-    }
 }
 
 impl BookRepository for TxtBaseBookRepository {
@@ -62,18 +52,62 @@ impl BookRepository for TxtBaseBookRepository {
         if books.iter().any(|b| b.bid == book.bid) {
             Err(AddBookError::BIDAlreadyExists)
         } else {
+            let deal_err = |e| AddBookError::IoError(e);
             books.push(book);
+            let tmp_path = format!("{}.tmp", self.repo_path);
+            let mut file = File::create(&tmp_path).map_err(deal_err)?;
+            for b in books.iter() {
+                write!(file, "{}", format_book_for_storage(b)).map_err(deal_err)?;
+            }
+            file.sync_all().map_err(deal_err)?;
+            fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
             Ok(())
         }
     }
 
-    fn update(&self, _book: Book) -> Result<(), crate::UpdateBookError> {
-        todo!();
+    fn update(&self, book: Book) -> Result<(), UpdateBookError> {
+        let mut books = self
+            .books
+            .write()
+            .map_err(|_| UpdateBookError::RepositoryLockError)?;
+
+        if let Some(b) = books.iter_mut().find(|b| b.bid == book.bid) {
+            *b = book;
+            let deal_err = |e| UpdateBookError::IoError(e);
+            let tmp_path = format!("{}.tmp", self.repo_path);
+            let mut file = File::create(&tmp_path).map_err(deal_err)?;
+            for b in books.iter() {
+                write!(file, "{}", format_book_for_storage(b)).map_err(deal_err)?;
+            }
+            file.sync_all().map_err(deal_err)?;
+            fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
+            Ok(())
+        } else {
+            Err(UpdateBookError::NonExistedBID)
+        }
     }
-    fn find_book_by_bid(&self, _bid: &str) -> Result<Book, crate::FindBookError> {
-        todo!();
+    fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError> {
+        let book = self
+            .books
+            .read()
+            .map_err(|_| FindBookError::RepositoryLockError)?;
+        if let Some(b) = book.iter().find(|b| b.bid == bid).cloned() {
+            Ok(b)
+        } else {
+            Err(FindBookError::NoResult)
+        }
     }
-    fn find_book_by_name(&self, _name: &str) -> Result<Vec<Book>, crate::FindBookError> {
-        todo!();
+    fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, crate::FindBookError> {
+        let books = self
+            .books
+            .read()
+            .map_err(|_| FindBookError::RepositoryLockError)?;
+        let query_res: Vec<Book> = books.iter().filter(|b| b.name == name).cloned().collect();
+
+        if query_res.is_empty() {
+            Err(FindBookError::NoResult)
+        } else {
+            Ok(query_res)
+        }
     }
 }
