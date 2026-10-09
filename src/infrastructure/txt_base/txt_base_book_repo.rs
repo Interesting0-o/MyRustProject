@@ -9,13 +9,11 @@ use std::{
     sync::RwLock,
 };
 
+use super::TXTBaseNewError;
+
 pub struct TxtBaseBookRepository {
     books: RwLock<Vec<Book>>,
     repo_path: String,
-}
-pub enum TXTBaseNewError {
-    PathNotFound,
-    PathIsEmpty,
 }
 
 impl TxtBaseBookRepository {
@@ -30,7 +28,7 @@ impl TxtBaseBookRepository {
             .create(true)
             .truncate(false)
             .open(path)
-            .unwrap_or_else(|e| panic!("无法发开该文件{e}"));
+            .map_err(TXTBaseNewError::OpenFailed)?;
         let books = BufReader::new(f)
             .lines()
             .map_while(Result::ok)

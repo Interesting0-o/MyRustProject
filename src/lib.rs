@@ -52,5 +52,6 @@ pub use crate::infrastructure::in_memory::{
 
 // txt 实现：数据落盘到 resource/*.txt
 pub use crate::infrastructure::txt_base::{
-    txt_base_book_repo::TxtBaseBookRepository, txt_base_reader_repo::TXTBaseReaderRepository,
+    TXTBaseNewError, txt_base_book_repo::TxtBaseBookRepository,
+    txt_base_reader_repo::TXTBaseReaderRepository,
 };
