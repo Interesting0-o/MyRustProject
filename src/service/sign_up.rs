@@ -5,10 +5,12 @@ use crate::{
 
 pub enum SignUpRes {
     AccountAlreadyExists,
+    /// 写入仓储失败（锁中毒、写持久化数据出错等）。
+    RepositoryError,
 }
 
 pub fn reader_sign_up<R>(
-    reader_repo: &mut R,
+    reader_repo: &R,
     name: &str,
     account: &str,
     pwd: &str,
@@ -21,15 +23,17 @@ where
         name: name.to_string(),
         hash_pwd: str_hash(pwd),
     };
-    if let Err(AddReaderError::AccountAlreadyExists) = reader_repo.add(reader) {
-        Err(SignUpRes::AccountAlreadyExists)
-    } else {
-        Ok(())
+    match reader_repo.add(reader) {
+        Ok(()) => Ok(()),
+        Err(AddReaderError::AccountAlreadyExists) => Err(SignUpRes::AccountAlreadyExists),
+        Err(AddReaderError::RepositoryLockError | AddReaderError::IOError(_)) => {
+            Err(SignUpRes::RepositoryError)
+        }
     }
 }
 
 pub fn librarian_sign_up<L>(
-    librarian_repo: &mut L,
+    librarian_repo: &L,
     name: &str,
     account: &str,
     pwd: &str,
@@ -42,9 +46,11 @@ where
         name: name.to_string(),
         hash_pwd: str_hash(pwd),
     };
-    if let Err(AddLibrarianError::AccountAlreadyExists) = librarian_repo.add(librarian) {
-        Err(SignUpRes::AccountAlreadyExists)
-    } else {
-        Ok(())
+    match librarian_repo.add(librarian) {
+        Ok(()) => Ok(()),
+        Err(AddLibrarianError::AccountAlreadyExists) => Err(SignUpRes::AccountAlreadyExists),
+        Err(AddLibrarianError::RepositoryLockError | AddLibrarianError::IOError(_)) => {
+            Err(SignUpRes::RepositoryError)
+        }
     }
 }
