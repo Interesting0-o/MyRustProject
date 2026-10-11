@@ -3,7 +3,8 @@
 use std::io;
 
 use book_manager::{
-    Librarian, LibrarianRepository, Reader, ReaderRepository, librarian_login, reader_login,
+    Librarian, LibrarianRepository, LoginError, Reader, ReaderRepository, librarian_login,
+    reader_login,
 };
 
 /// `login` 的结果：登录成功后的当前用户、用户选择注册，或用户选择退出。
@@ -54,18 +55,28 @@ where
 
             //根据
             if input == b'1' {
-                if let Ok(r) = reader_login(reader_repo, account.trim(), pwd.trim()) {
-                    break LoginResult::ReaderUser(r);
-                } else {
-                    println!("账号或密码错误请重新输入！");
-                    continue;
+                match reader_login(reader_repo, account.trim(), pwd.trim()) {
+                    Ok(r) => break LoginResult::ReaderUser(r),
+                    Err(LoginError::RepositoryError) => {
+                        println!("登录服务异常，请稍后重试");
+                        continue;
+                    }
+                    Err(_) => {
+                        println!("账号或密码错误请重新输入！");
+                        continue;
+                    }
                 }
             } else if input == b'2' {
-                if let Ok(l) = librarian_login(librarian_repo, account.trim(), pwd.trim()) {
-                    break LoginResult::LibrarianUser(l);
-                } else {
-                    println!("账号或密码错误请重新输入！");
-                    continue;
+                match librarian_login(librarian_repo, account.trim(), pwd.trim()) {
+                    Ok(l) => break LoginResult::LibrarianUser(l),
+                    Err(LoginError::RepositoryError) => {
+                        println!("登录服务异常，请稍后重试");
+                        continue;
+                    }
+                    Err(_) => {
+                        println!("账号或密码错误请重新输入！");
+                        continue;
+                    }
                 }
             }
         }

@@ -5,7 +5,7 @@ use std::io;
 use book_manager::{AddBookError, Book, BookRepository, FindBookError, UpdateBookError};
 
 /// 管理员菜单主循环：只负责打印菜单、读选择、分发到具体流程。
-pub fn librarian_contrl<B>(book_repo: &mut B)
+pub fn librarian_contrl<B>(book_repo: &B)
 where
     B: BookRepository,
 {
@@ -56,7 +56,7 @@ where
 }
 
 /// 读取新书信息并入库。
-fn add_book<B>(book_repo: &mut B)
+fn add_book<B>(book_repo: &B)
 where
     B: BookRepository,
 {
@@ -84,7 +84,7 @@ where
 }
 
 /// 按编号找到图书，把它的剩余数量改成用户输入的新值。
-fn update_book_num<B>(book_repo: &mut B)
+fn update_book_num<B>(book_repo: &B)
 where
     B: BookRepository,
 {

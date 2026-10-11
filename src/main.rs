@@ -10,7 +10,7 @@ use crate::cli::{
 
 fn main() {
     //仓库初始化：用带演示数据的仓储，而不是空的 new()
-    let mut repos = seed::seed_repositories();
+    let repos = seed::seed_repositories();
 
     //主循环
     loop {
@@ -18,13 +18,13 @@ fn main() {
             LoginResult::Quit => break,
             //注册完回到登录界面
             LoginResult::SignUp => {
-                sign_up(&mut repos.reader, &mut repos.librarian);
+                sign_up(&repos.reader, &repos.librarian);
             }
             LoginResult::ReaderUser(cur_reader) => {
-                reader_contrl(&mut repos.book, &mut repos.borrow_record, &cur_reader);
+                reader_contrl(&repos.book, &repos.borrow_record, &cur_reader);
             }
             LoginResult::LibrarianUser(_) => {
-                librarian_contrl(&mut repos.book);
+                librarian_contrl(&repos.book);
             }
         }
     }

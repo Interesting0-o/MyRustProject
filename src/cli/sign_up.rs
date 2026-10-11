@@ -4,7 +4,7 @@ use book_manager::{
     LibrarianRepository, ReaderRepository, SignUpRes, librarian_sign_up, reader_sign_up,
 };
 
-pub fn sign_up<R, L>(reader_repo: &mut R, librarian_repo: &mut L)
+pub fn sign_up<R, L>(reader_repo: &R, librarian_repo: &L)
 where
     R: ReaderRepository,
     L: LibrarianRepository,
@@ -42,25 +42,24 @@ where
                     continue;
                 }
 
-                if n == 1 {
-                    if let Err(SignUpRes::AccountAlreadyExists) =
-                        reader_sign_up(reader_repo, name.trim(), account.trim(), pwd.trim())
-                    {
-                        println!("当前账户已被注册，请重试");
-                        continue;
-                    } else {
+                let res = if n == 1 {
+                    reader_sign_up(reader_repo, name.trim(), account.trim(), pwd.trim())
+                } else {
+                    librarian_sign_up(librarian_repo, name.trim(), account.trim(), pwd.trim())
+                };
+
+                match res {
+                    Ok(()) => {
                         println!("注册成功，请登录");
                         break;
                     }
-                } else if n == 2 {
-                    if let Err(SignUpRes::AccountAlreadyExists) =
-                        librarian_sign_up(librarian_repo, name.trim(), account.trim(), pwd.trim())
-                    {
+                    Err(SignUpRes::AccountAlreadyExists) => {
                         println!("当前账户已被注册，请重试");
                         continue;
-                    } else {
-                        println!("注册成功，请登录");
-                        break;
+                    }
+                    Err(SignUpRes::RepositoryError) => {
+                        println!("注册失败，请稍后重试");
+                        continue;
                     }
                 }
             }

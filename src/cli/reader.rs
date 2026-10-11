@@ -3,12 +3,12 @@
 use std::io;
 
 use book_manager::{
-    BookRepository, BorrowBookError, BorrowRecordRepository, Reader, ReturnBookError, borrow_book,
-    return_book,
+    BookRepository, BorrowBookError, BorrowRecordRepository, Reader, ReturnBookError,
+    adapter::borrow_record_repo::FindBorrowRecordError, borrow_book, return_book,
 };
 
 /// 读者菜单主循环：只负责打印菜单、读选择、分发到具体流程。
-pub fn reader_contrl<B, BR>(book_repo: &mut B, borrow_record_repo: &mut BR, reader: &Reader)
+pub fn reader_contrl<B, BR>(book_repo: &B, borrow_record_repo: &BR, reader: &Reader)
 where
     B: BookRepository,
     BR: BorrowRecordRepository,
@@ -36,7 +36,19 @@ where
     B: BookRepository,
     BR: BorrowRecordRepository,
 {
-    let records = borrow_record_repo.find_records_by_account(&reader.account);
+    let records = match borrow_record_repo.find_records_by_account(&reader.account) {
+        Ok(records) => records,
+        //「没有记录」不算故障，仓储用 NoResult 表达空结果
+        Err(FindBorrowRecordError::NoResult) => {
+            println!("当前无借阅书籍");
+            return;
+        }
+        Err(_) => {
+            println!("查询借阅记录失败，请稍后重试");
+            return;
+        }
+    };
+
     if records.is_empty() {
         println!("当前无借阅书籍");
         return;
@@ -44,15 +56,16 @@ where
 
     for (idx, br) in records.iter().enumerate() {
         //记录里的 bid 必然指向一本存在的书（书只会新增和更新，不会删除）
-        let book = book_repo
-            .find_book_by_bid(&br.bid)
-            .expect("借阅记录指向的图书必然存在");
-        println!("{}. {}", idx + 1, book.name);
+        match book_repo.find_book_by_bid(&br.bid) {
+            Ok(book) => println!("{}. {}", idx + 1, book.name),
+            //仓储故障或数据不一致只影响这一条记录的展示，不该让整个查询失败
+            Err(_) => println!("{}. (无法读取图书信息)", idx + 1),
+        }
     }
 }
 
 /// 按书名搜索，并让用户从结果里选一本借阅。
-fn search_and_borrow<B, BR>(book_repo: &mut B, borrow_record_repo: &mut BR, reader: &Reader)
+fn search_and_borrow<B, BR>(book_repo: &B, borrow_record_repo: &BR, reader: &Reader)
 where
     B: BookRepository,
     BR: BorrowRecordRepository,
@@ -63,8 +76,6 @@ where
     //read_line 会带上末尾换行，去掉后再精确匹配
     let book_name = book_name.trim();
 
-    //find_book_by_name 返回拥有所有权的 Vec，查询结果不再借用 book_repo，
-    //这样后面借书时才能可变借用 book_repo
     let Ok(qurry_res) = book_repo.find_book_by_name(book_name) else {
         println!("查询图书失败，请稍后重试");
         return;
@@ -112,17 +123,31 @@ where
                 unreachable!("bid 刚由同一 book_repo 查出，不可能不存在")
             }
             Err(BorrowBookError::RepositoryError(_)) => println!("查询图书失败，请稍后重试"),
+            Err(BorrowBookError::UpdateBookError(_) | BorrowBookError::AddBorrowRecordError(_)) => {
+                println!("借阅失败，请稍后重试")
+            }
         }
     }
 }
 
 /// 列出当前读者的借阅记录，并让用户选一条归还。
-fn return_books<B, BR>(book_repo: &mut B, borrow_record_repo: &mut BR, reader: &Reader)
+fn return_books<B, BR>(book_repo: &B, borrow_record_repo: &BR, reader: &Reader)
 where
     B: BookRepository,
     BR: BorrowRecordRepository,
 {
-    let records = borrow_record_repo.find_records_by_account(&reader.account);
+    let mut records = match borrow_record_repo.find_records_by_account(&reader.account) {
+        Ok(records) => records,
+        Err(FindBorrowRecordError::NoResult) => {
+            println!("当前无借阅书籍");
+            return;
+        }
+        Err(_) => {
+            println!("查询借阅记录失败，请稍后重试");
+            return;
+        }
+    };
+
     if records.is_empty() {
         println!("当前无借阅书籍");
         return;
@@ -131,10 +156,10 @@ where
     println!("当前已借阅书籍如下:");
     for (idx, br) in records.iter().enumerate() {
         //记录里的 bid 必然指向一本存在的书（书只会新增和更新，不会删除）
-        let book = book_repo
-            .find_book_by_bid(&br.bid)
-            .expect("借阅记录指向的图书必然存在");
-        println!("{}. {}\n- 书籍编号:{}", idx + 1, book.name, book.bid);
+        match book_repo.find_book_by_bid(&br.bid) {
+            Ok(book) => println!("{}. {}\n- 书籍编号:{}", idx + 1, book.name, book.bid),
+            Err(_) => println!("{}. (无法读取图书信息)", idx + 1),
+        }
     }
 
     while let Some(i) = pick_index(
@@ -145,6 +170,11 @@ where
         match return_book(book_repo, borrow_record_repo, &br.bid, &reader.account) {
             Ok(()) => {
                 println!("归还成功！");
+                //归还后从本地列表移除这条记录，避免重复选择同一条
+                records.remove(i);
+                if records.is_empty() {
+                    break;
+                }
             }
             //记录刚由同一个 reader.account 查出，必然匹配
             Err(ReturnBookError::NotFoundRecord) => {
@@ -155,6 +185,11 @@ where
                 unreachable!("借阅记录指向的图书不可能不存在")
             }
             Err(ReturnBookError::RepositoryError(_)) => println!("查询图书失败，请稍后重试"),
+            Err(
+                ReturnBookError::UpdateBookError(_)
+                | ReturnBookError::FindBorrowRecordError(_)
+                | ReturnBookError::RemoveBorrowRecordError(_),
+            ) => println!("归还失败，请稍后重试"),
         }
     }
 }

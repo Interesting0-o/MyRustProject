@@ -23,10 +23,10 @@ pub struct SeededRepositories {
 /// 图书的 `num` 是「剩余可借数」，所以借阅记录统一通过 [`borrow_book`] 生成，
 /// 库存会被自动扣减，不会出现记录和库存对不上的情况。
 pub fn seed_repositories() -> SeededRepositories {
-    let mut reader = InMemoryReaderRepository::new();
-    let mut book = InMemoryBookRepository::new();
-    let mut borrow_record = InMemoryBorrowRecordRepository::new();
-    let mut librarian = InMemoryLibrarianRepository::new();
+    let reader = InMemoryReaderRepository::new();
+    let book = InMemoryBookRepository::new();
+    let borrow_record = InMemoryBorrowRecordRepository::new();
+    let librarian = InMemoryLibrarianRepository::new();
 
     // 读者：账号 / 姓名 / 明文密码
     for (account, name, pwd) in [
@@ -34,13 +34,13 @@ pub fn seed_repositories() -> SeededRepositories {
         ("r002", "李四", "222222"),
         ("r003", "王五", "333333"),
     ] {
-        if reader_sign_up(&mut reader, name, account, pwd).is_err() {
+        if reader_sign_up(&reader, name, account, pwd).is_err() {
             unreachable!("种子读者账号重复：{account}");
         }
     }
 
     // 管理员：账号 admin / 密码 admin123
-    if librarian_sign_up(&mut librarian, "图书管理员", "admin", "admin123").is_err() {
+    if librarian_sign_up(&librarian, "图书管理员", "admin", "admin123").is_err() {
         unreachable!("种子管理员账号重复：admin");
     }
 
@@ -64,7 +64,7 @@ pub fn seed_repositories() -> SeededRepositories {
 
     // 借阅记录：r001 借走 B001；r002 借走 B003，正好把它借空（库存降为 0）
     for (account, bid) in [("r001", "B001"), ("r002", "B003")] {
-        if borrow_book(&mut book, &mut borrow_record, account, bid).is_err() {
+        if borrow_book(&book, &borrow_record, account, bid).is_err() {
             unreachable!("种子借阅记录非法：{account} 借 {bid}");
         }
     }
