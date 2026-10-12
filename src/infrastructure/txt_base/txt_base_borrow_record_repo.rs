@@ -7,6 +7,7 @@ use std::{
 use crate::{
     BorrowRecord, BorrowRecordRepository, RemoveBorrowRecordError, TXTBaseNewError,
     adapter::borrow_record_repo::{AddBorrowRecordError, FindBorrowRecordError},
+    infrastructure::lock_poisoned,
     utils::{
         formatter::format_borrow_record_for_storage, generator::generator_borrow_record_from_str,
     },
@@ -55,11 +56,11 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         let mut records = self
             .records
             .write()
-            .map_err(|_| AddBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| AddBorrowRecordError::Backend(lock_poisoned()))?;
         let mut pk_record = self
             .pk_record
             .lock()
-            .map_err(|_| AddBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| AddBorrowRecordError::Backend(lock_poisoned()))?;
 
         *pk_record += 1;
         let br_id = format!("BR{}", *pk_record);
@@ -69,7 +70,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
             bid: bid.to_string(),
         });
         let tmp_path = format!("{}.tmp", self.repo_path);
-        let deal_err = |e| AddBorrowRecordError::IOError(e);
+        let deal_err = |e| AddBorrowRecordError::Backend(Box::new(e));
         let mut file = File::create(&tmp_path).map_err(deal_err)?;
         for br in records.iter() {
             writeln!(file, "{}", format_borrow_record_for_storage(br)).map_err(deal_err)?;
@@ -83,7 +84,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         let mut records = self
             .records
             .write()
-            .map_err(|_| RemoveBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| RemoveBorrowRecordError::Backend(lock_poisoned()))?;
 
         let Some(index) = records.iter().position(|r| r.br_id == br_id) else {
             return Err(RemoveBorrowRecordError::NonExistedBRID);
@@ -91,7 +92,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         records.remove(index);
 
         let tmp_path = format!("{}.tmp", self.repo_path);
-        let deal_err = |e| RemoveBorrowRecordError::IOError(e);
+        let deal_err = |e| RemoveBorrowRecordError::Backend(Box::new(e));
         let mut file = File::create(&tmp_path).map_err(deal_err)?;
         for br in records.iter() {
             writeln!(file, "{}", format_borrow_record_for_storage(br)).map_err(deal_err)?;
@@ -105,7 +106,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         if let Some(br) = records.iter().find(|r| r.br_id == br_id).cloned() {
             Ok(br)
         } else {
@@ -116,7 +117,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> =
             records.iter().filter(|r| r.bid == bid).cloned().collect();
 
@@ -133,7 +134,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> = records
             .iter()
             .filter(|r| r.account == account)
@@ -154,7 +155,7 @@ impl BorrowRecordRepository for TXTBaseBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> = records
             .iter()
             .filter(|r| r.account == account && r.bid == bid)

@@ -1,6 +1,7 @@
 use crate::{
     AddLibrarianError, Librarian, LibrarianRepository, UpdateLibrarianError,
     adapter::librarian_repo::FindLibrarianError,
+    infrastructure::lock_poisoned,
     utils::{formatter::format_librarian_for_storage, generator::generator_librarian_from_str},
 };
 use std::io::Write;
@@ -47,16 +48,16 @@ impl LibrarianRepository for TxtBaseLibrarianRepository {
         let mut librarians = self
             .librarians
             .write()
-            .map_err(|_| AddLibrarianError::RepositoryLockError)?;
+            .map_err(|_| AddLibrarianError::Backend(lock_poisoned()))?;
         if librarians.iter().any(|l| l.account == librarian.account) {
             Err(AddLibrarianError::AccountAlreadyExists)
         } else {
-            let deal_err = |e| AddLibrarianError::IOError(e);
+            let deal_err = |e| AddLibrarianError::Backend(Box::new(e));
             librarians.push(librarian);
             let tmp_path = format!("{}.tmp", self.repo_path);
             let mut file = File::create(&tmp_path).map_err(deal_err)?;
             for l in librarians.iter() {
-                write!(file, "{}", format_librarian_for_storage(l)).map_err(deal_err)?;
+                writeln!(file, "{}", format_librarian_for_storage(l)).map_err(deal_err)?;
             }
             file.sync_all().map_err(deal_err)?;
             fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
@@ -68,18 +69,18 @@ impl LibrarianRepository for TxtBaseLibrarianRepository {
         let mut librarians = self
             .librarians
             .write()
-            .map_err(|_| UpdateLibrarianError::RepositoryLockError)?;
+            .map_err(|_| UpdateLibrarianError::Backend(lock_poisoned()))?;
 
         if let Some(l) = librarians
             .iter_mut()
             .find(|l| l.account == librarian.account)
         {
             *l = librarian;
-            let deal_err = |e| UpdateLibrarianError::IOError(e);
+            let deal_err = |e| UpdateLibrarianError::Backend(Box::new(e));
             let tmp_path = format!("{}.tmp", self.repo_path);
             let mut file = File::create(&tmp_path).map_err(deal_err)?;
             for l in librarians.iter() {
-                write!(file, "{}", format_librarian_for_storage(l)).map_err(deal_err)?;
+                writeln!(file, "{}", format_librarian_for_storage(l)).map_err(deal_err)?;
             }
             file.sync_all().map_err(deal_err)?;
             fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
@@ -92,7 +93,7 @@ impl LibrarianRepository for TxtBaseLibrarianRepository {
         let librarians = self
             .librarians
             .read()
-            .map_err(|_| FindLibrarianError::RepositoryLockError)?;
+            .map_err(|_| FindLibrarianError::Backend(lock_poisoned()))?;
         if let Some(l) = librarians.iter().find(|l| l.account == account).cloned() {
             Ok(l)
         } else {
@@ -103,7 +104,7 @@ impl LibrarianRepository for TxtBaseLibrarianRepository {
         let librarians = self
             .librarians
             .read()
-            .map_err(|_| FindLibrarianError::RepositoryLockError)?;
+            .map_err(|_| FindLibrarianError::Backend(lock_poisoned()))?;
         let query_res: Vec<Librarian> = librarians
             .iter()
             .filter(|l| l.name == name)

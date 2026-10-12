@@ -1,6 +1,7 @@
 use crate::{
     AddReaderError, Reader, ReaderRepository, UpdateReaderError,
     adapter::reader_repo::FindReaderError,
+    infrastructure::lock_poisoned,
     utils::{formatter::format_reader_for_storage, generator::generator_reader_from_str},
 };
 use std::{
@@ -49,17 +50,17 @@ impl ReaderRepository for TXTBaseReaderRepository {
         let mut readers = self
             .readers
             .write()
-            .map_err(|_| AddReaderError::RepositoryLockError)?;
+            .map_err(|_| AddReaderError::Backend(lock_poisoned()))?;
 
         if readers.iter().any(|r| r.account == reader.account) {
             Err(AddReaderError::AccountAlreadyExists)
         } else {
             readers.push(reader);
-            let deal_err = |e| AddReaderError::IOError(e);
+            let deal_err = |e| AddReaderError::Backend(Box::new(e));
             let tmp_path = format!("{}.tmp", self.repo_path);
             let mut file = File::create(&tmp_path).map_err(deal_err)?;
             for r in readers.iter() {
-                write!(file, "{}", format_reader_for_storage(r)).map_err(deal_err)?;
+                writeln!(file, "{}", format_reader_for_storage(r)).map_err(deal_err)?;
             }
             file.sync_all().map_err(deal_err)?;
             fs::rename(tmp_path, &self.repo_path).map_err(deal_err)?;
@@ -71,16 +72,16 @@ impl ReaderRepository for TXTBaseReaderRepository {
         let mut readers = self
             .readers
             .write()
-            .map_err(|_| UpdateReaderError::RepositoryLockError)?;
+            .map_err(|_| UpdateReaderError::Backend(lock_poisoned()))?;
 
         if let Some(r) = readers.iter_mut().find(|r| r.account == reader.account) {
             *r = reader;
-            let deal_err = |e| UpdateReaderError::IOError(e);
+            let deal_err = |e| UpdateReaderError::Backend(Box::new(e));
 
             let tmp_path = format!("{}.tmp", self.repo_path);
             let mut file = File::create(&tmp_path).map_err(deal_err)?;
             for rder in readers.iter() {
-                write!(file, "{}", format_reader_for_storage(rder)).map_err(deal_err)?;
+                writeln!(file, "{}", format_reader_for_storage(rder)).map_err(deal_err)?;
             }
             file.sync_all().map_err(deal_err)?;
             fs::rename(tmp_path, &self.repo_path).map_err(deal_err)?;
@@ -93,7 +94,7 @@ impl ReaderRepository for TXTBaseReaderRepository {
         let readers = self
             .readers
             .read()
-            .map_err(|_| FindReaderError::RepositoryLockError)?;
+            .map_err(|_| FindReaderError::Backend(lock_poisoned()))?;
         let query_res: Vec<Reader> = readers.iter().filter(|r| r.name == name).cloned().collect();
         if query_res.is_empty() {
             Err(FindReaderError::NoResult)
@@ -105,7 +106,7 @@ impl ReaderRepository for TXTBaseReaderRepository {
         let readers = self
             .readers
             .read()
-            .map_err(|_| FindReaderError::RepositoryLockError)?;
+            .map_err(|_| FindReaderError::Backend(lock_poisoned()))?;
         if let Some(reader) = readers.iter().find(|r| r.account == account).cloned() {
             Ok(reader)
         } else {

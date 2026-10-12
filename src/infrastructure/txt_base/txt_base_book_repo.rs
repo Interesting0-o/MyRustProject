@@ -1,5 +1,6 @@
 use crate::{
     AddBookError, Book, BookRepository, FindBookError, UpdateBookError,
+    infrastructure::lock_poisoned,
     utils::{formatter::format_book_for_storage, generator::generator_book_from_str},
 };
 use std::io::Write;
@@ -46,16 +47,16 @@ impl BookRepository for TxtBaseBookRepository {
         let mut books = self
             .books
             .write()
-            .map_err(|_| AddBookError::RepositoryLockError)?;
+            .map_err(|_| AddBookError::Backend(lock_poisoned()))?;
         if books.iter().any(|b| b.bid == book.bid) {
             Err(AddBookError::BIDAlreadyExists)
         } else {
-            let deal_err = |e| AddBookError::IoError(e);
+            let deal_err = |e| AddBookError::Backend(Box::new(e));
             books.push(book);
             let tmp_path = format!("{}.tmp", self.repo_path);
             let mut file = File::create(&tmp_path).map_err(deal_err)?;
             for b in books.iter() {
-                write!(file, "{}", format_book_for_storage(b)).map_err(deal_err)?;
+                writeln!(file, "{}", format_book_for_storage(b)).map_err(deal_err)?;
             }
             file.sync_all().map_err(deal_err)?;
             fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
@@ -67,15 +68,15 @@ impl BookRepository for TxtBaseBookRepository {
         let mut books = self
             .books
             .write()
-            .map_err(|_| UpdateBookError::RepositoryLockError)?;
+            .map_err(|_| UpdateBookError::Backend(lock_poisoned()))?;
 
         if let Some(b) = books.iter_mut().find(|b| b.bid == book.bid) {
             *b = book;
-            let deal_err = |e| UpdateBookError::IoError(e);
+            let deal_err = |e| UpdateBookError::Backend(Box::new(e));
             let tmp_path = format!("{}.tmp", self.repo_path);
             let mut file = File::create(&tmp_path).map_err(deal_err)?;
             for b in books.iter() {
-                write!(file, "{}", format_book_for_storage(b)).map_err(deal_err)?;
+                writeln!(file, "{}", format_book_for_storage(b)).map_err(deal_err)?;
             }
             file.sync_all().map_err(deal_err)?;
             fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
@@ -88,7 +89,7 @@ impl BookRepository for TxtBaseBookRepository {
         let book = self
             .books
             .read()
-            .map_err(|_| FindBookError::RepositoryLockError)?;
+            .map_err(|_| FindBookError::Backend(lock_poisoned()))?;
         if let Some(b) = book.iter().find(|b| b.bid == bid).cloned() {
             Ok(b)
         } else {
@@ -99,7 +100,7 @@ impl BookRepository for TxtBaseBookRepository {
         let books = self
             .books
             .read()
-            .map_err(|_| FindBookError::RepositoryLockError)?;
+            .map_err(|_| FindBookError::Backend(lock_poisoned()))?;
         let query_res: Vec<Book> = books.iter().filter(|b| b.name == name).cloned().collect();
 
         if query_res.is_empty() {
