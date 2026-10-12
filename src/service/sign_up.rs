@@ -1,12 +1,12 @@
 use crate::{
-    AddLibrarianError, AddReaderError, Librarian, LibrarianRepository, Reader, ReaderRepository,
-    service::login::str_hash,
+    AddLibrarianError, AddReaderError, BackendError, Librarian, LibrarianRepository, Reader,
+    ReaderRepository, service::login::str_hash,
 };
 
 pub enum SignUpRes {
     AccountAlreadyExists,
-    /// 写入仓储失败（锁中毒、写持久化数据出错等）。
-    RepositoryError,
+    /// 写入仓储失败（IO、序列化、锁中毒等）。
+    RepositoryError(BackendError),
 }
 
 pub fn reader_sign_up<R>(
@@ -26,9 +26,7 @@ where
     match reader_repo.add(reader) {
         Ok(()) => Ok(()),
         Err(AddReaderError::AccountAlreadyExists) => Err(SignUpRes::AccountAlreadyExists),
-        Err(AddReaderError::RepositoryLockError | AddReaderError::IOError(_)) => {
-            Err(SignUpRes::RepositoryError)
-        }
+        Err(AddReaderError::Backend(e)) => Err(SignUpRes::RepositoryError(e)),
     }
 }
 
@@ -49,8 +47,6 @@ where
     match librarian_repo.add(librarian) {
         Ok(()) => Ok(()),
         Err(AddLibrarianError::AccountAlreadyExists) => Err(SignUpRes::AccountAlreadyExists),
-        Err(AddLibrarianError::RepositoryLockError | AddLibrarianError::IOError(_)) => {
-            Err(SignUpRes::RepositoryError)
-        }
+        Err(AddLibrarianError::Backend(e)) => Err(SignUpRes::RepositoryError(e)),
     }
 }

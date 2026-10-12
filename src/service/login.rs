@@ -1,13 +1,13 @@
 use crate::{
-    Librarian, LibrarianRepository, Reader, ReaderRepository,
+    BackendError, Librarian, LibrarianRepository, Reader, ReaderRepository,
     adapter::{librarian_repo::FindLibrarianError, reader_repo::FindReaderError},
 };
 
 pub enum LoginError {
     AccountNotFound,
     PasswordError,
-    /// 查询仓储失败（锁中毒等）。
-    RepositoryError,
+    /// 查询仓储失败（IO、序列化、锁中毒等）。
+    RepositoryError(BackendError),
 }
 
 pub fn reader_login<R: ReaderRepository>(
@@ -19,7 +19,7 @@ pub fn reader_login<R: ReaderRepository>(
         Ok(r) if r.hash_pwd == str_hash(pwd) => Ok(r),
         Ok(_) => Err(LoginError::PasswordError),
         Err(FindReaderError::NoResult) => Err(LoginError::AccountNotFound),
-        Err(FindReaderError::RepositoryLockError) => Err(LoginError::RepositoryError),
+        Err(FindReaderError::Backend(e)) => Err(LoginError::RepositoryError(e)),
     }
 }
 
@@ -32,7 +32,7 @@ pub fn librarian_login<L: LibrarianRepository>(
         Ok(l) if l.hash_pwd == str_hash(pwd) => Ok(l),
         Ok(_) => Err(LoginError::PasswordError),
         Err(FindLibrarianError::NoResult) => Err(LoginError::AccountNotFound),
-        Err(FindLibrarianError::RepositoryLockError) => Err(LoginError::RepositoryError),
+        Err(FindLibrarianError::Backend(e)) => Err(LoginError::RepositoryError(e)),
     }
 }
 
