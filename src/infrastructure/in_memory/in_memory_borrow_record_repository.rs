@@ -5,6 +5,7 @@ use std::sync::{Mutex, RwLock};
 use crate::{
     BorrowRecord, BorrowRecordRepository, RemoveBorrowRecordError,
     adapter::borrow_record_repo::{AddBorrowRecordError, FindBorrowRecordError},
+    infrastructure::lock_poisoned,
 };
 
 /// 基于 `Vec` 的借阅记录仓储，数据仅保存在进程内存中，重启即丢失。
@@ -30,11 +31,11 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         let mut records = self
             .records
             .write()
-            .map_err(|_| AddBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| AddBorrowRecordError::Backend(lock_poisoned()))?;
         let mut pk_record = self
             .pk_record
             .lock()
-            .map_err(|_| AddBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| AddBorrowRecordError::Backend(lock_poisoned()))?;
         *pk_record += 1;
         let br_id = format!("BR{}", *pk_record);
         if records.iter().any(|r| r.br_id == br_id) {
@@ -52,7 +53,7 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         let mut records = self
             .records
             .write()
-            .map_err(|_| RemoveBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| RemoveBorrowRecordError::Backend(lock_poisoned()))?;
 
         match records.iter().position(|r| r.br_id == br_id) {
             Some(index) => {
@@ -67,7 +68,7 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         if let Some(br) = records.iter().find(|b| b.br_id == br_id).cloned() {
             Ok(br)
         } else {
@@ -79,7 +80,7 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> =
             records.iter().filter(|r| r.bid == bid).cloned().collect();
 
@@ -97,7 +98,7 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         let records = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> = records
             .iter()
             .filter(|r| r.account == account)
@@ -119,7 +120,7 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         let record = self
             .records
             .read()
-            .map_err(|_| FindBorrowRecordError::RepositoryLockError)?;
+            .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
 
         let query_res: Vec<BorrowRecord> = record
             .iter()

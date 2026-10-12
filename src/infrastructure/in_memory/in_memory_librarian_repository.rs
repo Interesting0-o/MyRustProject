@@ -2,7 +2,7 @@
 
 use crate::{
     AddLibrarianError, Librarian, LibrarianRepository, UpdateLibrarianError,
-    adapter::librarian_repo::FindLibrarianError,
+    adapter::librarian_repo::FindLibrarianError, infrastructure::lock_poisoned,
 };
 use std::sync::RwLock;
 /// 基于 `Vec` 的管理员仓储，数据仅保存在进程内存中，重启即丢失。
@@ -27,7 +27,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
         let mut librarians = self
             .librarians
             .write()
-            .map_err(|_| AddLibrarianError::RepositoryLockError)?;
+            .map_err(|_| AddLibrarianError::Backend(lock_poisoned()))?;
         if librarians.iter().any(|l| l.account == librarian.account) {
             Err(AddLibrarianError::AccountAlreadyExists)
         } else {
@@ -41,7 +41,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
         let mut librarians = self
             .librarians
             .write()
-            .map_err(|_| UpdateLibrarianError::RepositoryLockError)?;
+            .map_err(|_| UpdateLibrarianError::Backend(lock_poisoned()))?;
         if let Some(l) = librarians
             .iter_mut()
             .find(|l| l.account == librarian.account)
@@ -58,7 +58,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
         let librarians = self
             .librarians
             .read()
-            .map_err(|_| FindLibrarianError::RepositoryLockError)?;
+            .map_err(|_| FindLibrarianError::Backend(lock_poisoned()))?;
         if let Some(l) = librarians.iter().find(|l| l.account == account).cloned() {
             Ok(l)
         } else {
@@ -71,7 +71,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
         let librarians = self
             .librarians
             .read()
-            .map_err(|_| FindLibrarianError::RepositoryLockError)?;
+            .map_err(|_| FindLibrarianError::Backend(lock_poisoned()))?;
         let query_res: Vec<Librarian> = librarians
             .iter()
             .filter(|l| l.name == name)

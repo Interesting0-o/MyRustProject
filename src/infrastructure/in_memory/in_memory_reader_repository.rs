@@ -1,7 +1,7 @@
 //! [`ReaderRepository`] 的内存实现。
 use crate::{
     AddReaderError, Reader, ReaderRepository, UpdateReaderError,
-    adapter::reader_repo::FindReaderError,
+    adapter::reader_repo::FindReaderError, infrastructure::lock_poisoned,
 };
 use std::sync::RwLock;
 
@@ -27,7 +27,7 @@ impl ReaderRepository for InMemoryReaderRepository {
         let mut readers = self
             .readers
             .write()
-            .map_err(|_| AddReaderError::RepositoryLockError)?;
+            .map_err(|_| AddReaderError::Backend(lock_poisoned()))?;
 
         if readers.iter().any(|r| r.account == reader.account) {
             return Err(AddReaderError::AccountAlreadyExists);
@@ -42,7 +42,7 @@ impl ReaderRepository for InMemoryReaderRepository {
         let mut readers = self
             .readers
             .write()
-            .map_err(|_| UpdateReaderError::RepositoryLockError)?;
+            .map_err(|_| UpdateReaderError::Backend(lock_poisoned()))?;
         if let Some(r) = readers.iter_mut().find(|r| r.account == reader.account) {
             *r = reader;
             Ok(())
@@ -56,7 +56,7 @@ impl ReaderRepository for InMemoryReaderRepository {
         let readers = self
             .readers
             .read()
-            .map_err(|_| FindReaderError::RepositoryLockError)?;
+            .map_err(|_| FindReaderError::Backend(lock_poisoned()))?;
         if let Some(reader) = readers.iter().find(|r| r.account == account).cloned() {
             Ok(reader)
         } else {
@@ -69,7 +69,7 @@ impl ReaderRepository for InMemoryReaderRepository {
         let readers = self
             .readers
             .read()
-            .map_err(|_| FindReaderError::RepositoryLockError)?;
+            .map_err(|_| FindReaderError::Backend(lock_poisoned()))?;
         let query_res: Vec<Reader> = readers.iter().filter(|r| r.name == name).cloned().collect();
         if query_res.is_empty() {
             Err(FindReaderError::NoResult)

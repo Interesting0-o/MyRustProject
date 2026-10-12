@@ -1,4 +1,7 @@
-use crate::{AddBookError, Book, BookRepository, FindBookError, UpdateBookError};
+use crate::{
+    AddBookError, Book, BookRepository, FindBookError, UpdateBookError,
+    infrastructure::lock_poisoned,
+};
 use std::sync::RwLock;
 
 pub struct InMemoryBookRepository {
@@ -17,12 +20,13 @@ impl Default for InMemoryBookRepository {
         Self::new()
     }
 }
+
 impl BookRepository for InMemoryBookRepository {
     fn add(&self, book: Book) -> Result<(), AddBookError> {
         let mut books = self
             .books
             .write()
-            .map_err(|_| AddBookError::RepositoryLockError)?;
+            .map_err(|_| AddBookError::Backend(lock_poisoned()))?;
         if books.iter().any(|b| b.bid == book.bid) {
             Err(AddBookError::BIDAlreadyExists)
         } else {
@@ -35,7 +39,7 @@ impl BookRepository for InMemoryBookRepository {
         let mut books = self
             .books
             .write()
-            .map_err(|_| UpdateBookError::RepositoryLockError)?;
+            .map_err(|_| UpdateBookError::Backend(lock_poisoned()))?;
         if let Some(b) = books.iter_mut().find(|b| b.bid == book.bid) {
             *b = book;
             Ok(())
@@ -48,7 +52,7 @@ impl BookRepository for InMemoryBookRepository {
         let books = self
             .books
             .read()
-            .map_err(|_| FindBookError::RepositoryLockError)?;
+            .map_err(|_| FindBookError::Backend(lock_poisoned()))?;
         if let Some(book) = books.iter().find(|book| book.bid == bid).cloned() {
             Ok(book)
         } else {
@@ -60,7 +64,7 @@ impl BookRepository for InMemoryBookRepository {
         let books = self
             .books
             .read()
-            .map_err(|_| FindBookError::RepositoryLockError)?;
+            .map_err(|_| FindBookError::Backend(lock_poisoned()))?;
         let query_res: Vec<Book> = books
             .iter()
             .filter(|book| book.name == name)
