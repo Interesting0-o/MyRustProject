@@ -1,32 +1,35 @@
 //! 图书仓储接口。
 
-use crate::Book;
+use crate::{Book, adapter::BackendError};
 
+/// 新增图书时可能出现的错误。
+#[derive(Debug)]
 pub enum AddBookError {
+    /// 业务规则：`book.bid` 已存在。
     BIDAlreadyExists,
-    /// 持久化到文件失败（磁盘满、权限不足等）。
-    IoError(std::io::Error),
-    RepositoryLockError,
+    /// 仓储故障（IO、序列化、锁中毒等）。
+    Backend(BackendError),
 }
 
+/// 更新图书时可能出现的错误。
 #[derive(Debug)]
 pub enum UpdateBookError {
+    /// 业务规则：`book.bid` 不存在，更新无对象。
     NonExistedBID,
-    /// 持久化到文件失败（磁盘满、权限不足等）。
-    IoError(std::io::Error),
-    RepositoryLockError,
+    /// 仓储故障（IO、序列化、锁中毒等）。
+    Backend(BackendError),
 }
 
 /// 查询图书时可能出现的错误。
 ///
-/// 「没查到」不算错误：按 `bid` 查不到是 `Ok(None)`，按书名查不到是 `Ok(vec![])`。
-/// 本枚举只表示仓储本身访问失败，让调用方能把「故障」和「空结果」分开处理。
+/// 「没查到」不算仓储故障，用 [`FindBookError::NoResult`] 表达空结果；
+/// [`FindBookError::Backend`] 只表示仓储访问失败，让调用方能把「故障」和「空结果」分开处理。
 #[derive(Debug)]
 pub enum FindBookError {
-    /// 读取持久化数据失败（磁盘满、权限不足等）。
-    IoError(std::io::Error),
-    RepositoryLockError,
+    /// 空结果：按 `bid` 查不到对应图书。
     NoResult,
+    /// 仓储故障（IO、序列化、锁中毒等）。
+    Backend(BackendError),
 }
 
 /// 图书仓储：定义 [`Book`] 的读写操作。
@@ -45,21 +48,22 @@ pub trait BookRepository {
     ///
     /// # 错误
     ///
-    /// 当 `book.bid` 已存在时返回 [`AddBookError::BIDAlreadyExists`]。
+    /// 当 `book.bid` 已存在时返回 [`AddBookError::BIDAlreadyExists`]；
+    /// 仓储访问失败时返回 [`AddBookError::Backend`]。
     fn add(&self, book: Book) -> Result<(), AddBookError>;
 
-    /// 按书名查找，返回所有同名图书；没有匹配时返回 `Ok(vec![])`。
+    /// 按书名查找，返回所有同名图书；没有匹配时返回 [`FindBookError::NoResult`]。
     ///
     /// # 错误
     ///
-    /// 仓储访问失败时返回 [`FindBookError`]。
+    /// 仓储访问失败时返回 [`FindBookError::Backend`]。
     fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, FindBookError>;
 
-    /// 按编号 `bid` 精确查找，不存在时返回 `Ok(None)`。
+    /// 按编号 `bid` 精确查找，不存在时返回 [`FindBookError::NoResult`]。
     ///
     /// # 错误
     ///
-    /// 仓储访问失败时返回 [`FindBookError`]。
+    /// 仓储访问失败时返回 [`FindBookError::Backend`]。
     fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError>;
 
     /// 更新图书信息，以 `book.bid` 作为定位依据。
@@ -69,7 +73,7 @@ pub trait BookRepository {
     ///
     /// # 错误
     ///
-    /// 当 `bid` 不存在时返回 [`UpdateBookError::NonExistedBID`]，
-    /// 持久化实现写盘失败时返回 [`UpdateBookError::IoError`]。
+    /// 当 `bid` 不存在时返回 [`UpdateBookError::NonExistedBID`]；
+    /// 仓储访问失败时返回 [`UpdateBookError::Backend`]。
     fn update(&self, book: Book) -> Result<(), UpdateBookError>;
 }

@@ -1,21 +1,34 @@
 //! 读者仓储接口。
 
-use crate::Reader;
+use crate::{Reader, adapter::BackendError};
 
+/// 新增读者时可能出现的错误。
+#[derive(Debug)]
 pub enum AddReaderError {
+    /// 业务规则：`reader.account` 已存在。
     AccountAlreadyExists,
-    RepositoryLockError,
-    IOError(std::io::Error),
+    /// 仓储故障（IO、序列化、锁中毒等）。
+    Backend(BackendError),
 }
 
+/// 更新读者时可能出现的错误。
+#[derive(Debug)]
 pub enum UpdateReaderError {
+    /// 业务规则：`reader.account` 不存在，更新无对象。
     NonExistedAccount,
-    RepositoryLockError,
-    IOError(std::io::Error),
+    /// 仓储故障（IO、序列化、锁中毒等）。
+    Backend(BackendError),
 }
+
+/// 查询读者时可能出现的错误。
+///
+/// 「没查到」不算仓储故障，用 [`FindReaderError::NoResult`] 表达空结果。
+#[derive(Debug)]
 pub enum FindReaderError {
+    /// 空结果：没有匹配的读者。
     NoResult,
-    RepositoryLockError,
+    /// 仓储故障（IO、序列化、锁中毒等）。
+    Backend(BackendError),
 }
 
 /// 读者仓储：定义 [`Reader`] 的读写操作。
@@ -28,13 +41,22 @@ pub trait ReaderRepository {
     ///
     /// # 错误
     ///
-    /// 当 `reader.account` 已存在时返回 [`AddReaderError::AccountAlreadyExists`]。
+    /// 当 `reader.account` 已存在时返回 [`AddReaderError::AccountAlreadyExists`]；
+    /// 仓储访问失败时返回 [`AddReaderError::Backend`]。
     fn add(&self, reader: Reader) -> Result<(), AddReaderError>;
 
-    /// 按账号 `account` 精确查找，不存在时返回 `None`。
+    /// 按账号 `account` 精确查找，不存在时返回 [`FindReaderError::NoResult`]。
+    ///
+    /// # 错误
+    ///
+    /// 仓储访问失败时返回 [`FindReaderError::Backend`]。
     fn find_reader_by_account(&self, account: &str) -> Result<Reader, FindReaderError>;
 
-    /// 按姓名查找，返回所有同名读者；没有匹配时返回空 `Vec`。
+    /// 按姓名查找，返回所有同名读者；没有匹配时返回 [`FindReaderError::NoResult`]。
+    ///
+    /// # 错误
+    ///
+    /// 仓储访问失败时返回 [`FindReaderError::Backend`]。
     fn find_reader_by_name(&self, name: &str) -> Result<Vec<Reader>, FindReaderError>;
 
     /// 更新读者信息，以 `reader.account` 作为定位依据。
@@ -44,6 +66,7 @@ pub trait ReaderRepository {
     ///
     /// # 错误
     ///
-    /// 当 `account` 不存在时返回 [`UpdateReaderError::NonExistedAccount`]。
+    /// 当 `account` 不存在时返回 [`UpdateReaderError::NonExistedAccount`]；
+    /// 仓储访问失败时返回 [`UpdateReaderError::Backend`]。
     fn update(&self, reader: Reader) -> Result<(), UpdateReaderError>;
 }

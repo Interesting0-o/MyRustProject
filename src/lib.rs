@@ -24,6 +24,7 @@ pub use crate::schema::{Book, BorrowRecord, Librarian, Reader};
 
 // ---- 仓储抽象：业务层只依赖这些 trait，不关心具体实现 ----
 pub use crate::adapter::{
+    BackendError,
     book_repo::{AddBookError, BookRepository, FindBookError, UpdateBookError},
     borrow_record_repo::{BorrowRecordRepository, RemoveBorrowRecordError},
     librarian_repo::{
