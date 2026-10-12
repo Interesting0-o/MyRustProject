@@ -78,8 +78,7 @@ where
         Ok(()) => println!("添加成功!"),
         //bid 是主键，重复时 add 会拒绝，不能覆盖已有图书
         Err(AddBookError::BIDAlreadyExists) => println!("书籍编号已存在，添加失败!"),
-        Err(AddBookError::IoError(e)) => println!("图书添加失败，写入文件出错: {e}"),
-        Err(AddBookError::RepositoryLockError) => println!("错误的写入时机"),
+        Err(AddBookError::Backend(e)) => println!("图书添加失败: {e}"),
     }
 }
 
@@ -97,8 +96,8 @@ where
             println!("未找到该编号的图书");
             return;
         }
-        Err(_) => {
-            println!("查询图书失败，请稍后重试");
+        Err(FindBookError::Backend(e)) => {
+            println!("查询图书失败: {e}");
             return;
         }
     };
@@ -112,8 +111,7 @@ where
         Err(UpdateBookError::NonExistedBID) => {
             unreachable!("bid 刚由同一 book_repo 查出，不可能不存在")
         }
-        Err(UpdateBookError::IoError(e)) => println!("变更失败，写入文件出错: {e}"),
-        Err(UpdateBookError::RepositoryLockError) => println!("错误的写入时机"),
+        Err(UpdateBookError::Backend(e)) => println!("变更失败: {e}"),
     }
 }
 

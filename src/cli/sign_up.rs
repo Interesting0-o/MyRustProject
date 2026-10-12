@@ -57,8 +57,8 @@ where
                         println!("当前账户已被注册，请重试");
                         continue;
                     }
-                    Err(SignUpRes::RepositoryError) => {
-                        println!("注册失败，请稍后重试");
+                    Err(SignUpRes::RepositoryError(e)) => {
+                        println!("注册失败: {e}");
                         continue;
                     }
                 }

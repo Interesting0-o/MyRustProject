@@ -57,8 +57,8 @@ where
             if input == b'1' {
                 match reader_login(reader_repo, account.trim(), pwd.trim()) {
                     Ok(r) => break LoginResult::ReaderUser(r),
-                    Err(LoginError::RepositoryError) => {
-                        println!("登录服务异常，请稍后重试");
+                    Err(LoginError::RepositoryError(e)) => {
+                        println!("登录服务异常: {e}");
                         continue;
                     }
                     Err(_) => {
@@ -69,8 +69,8 @@ where
             } else if input == b'2' {
                 match librarian_login(librarian_repo, account.trim(), pwd.trim()) {
                     Ok(l) => break LoginResult::LibrarianUser(l),
-                    Err(LoginError::RepositoryError) => {
-                        println!("登录服务异常，请稍后重试");
+                    Err(LoginError::RepositoryError(e)) => {
+                        println!("登录服务异常: {e}");
                         continue;
                     }
                     Err(_) => {
