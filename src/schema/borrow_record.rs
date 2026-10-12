@@ -3,7 +3,9 @@
 /// - `br_id`：记录编号，全局唯一
 /// - `bid`：被借图书的编号
 /// - `account`：借阅者的账号
-#[derive(Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BorrowRecord {
     pub br_id: String,
     pub bid: String,
