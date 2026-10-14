@@ -1,4 +1,6 @@
 pub mod json_base_book_repo;
+pub mod json_base_borrow_record_repo;
+pub mod json_base_librarian_repo;
 pub mod json_base_reader_repo;
 /// 所有 json 仓储共用的构造错误。
 pub enum JSONBaseNewError {
