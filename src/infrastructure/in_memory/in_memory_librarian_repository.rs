@@ -21,6 +21,12 @@ impl InMemoryLibrarianRepository {
     }
 }
 
+impl Default for InMemoryLibrarianRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LibrarianRepository for InMemoryLibrarianRepository {
     /// 先扫描 `account` 是否已被占用，没有才追加到末尾。
     fn add(&self, librarian: Librarian) -> Result<(), AddLibrarianError> {

@@ -26,6 +26,12 @@ impl InMemoryBorrowRecordRepository {
     }
 }
 
+impl Default for InMemoryBorrowRecordRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
     fn add(&self, account: &str, bid: &str) -> Result<(), AddBorrowRecordError> {
         let mut records = self

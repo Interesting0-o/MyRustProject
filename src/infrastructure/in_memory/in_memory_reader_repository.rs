@@ -21,6 +21,12 @@ impl InMemoryReaderRepository {
     }
 }
 
+impl Default for InMemoryReaderRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReaderRepository for InMemoryReaderRepository {
     /// 先扫描 `account` 是否已被占用，没有才追加到末尾。
     fn add(&self, reader: Reader) -> Result<(), AddReaderError> {
@@ -30,7 +36,7 @@ impl ReaderRepository for InMemoryReaderRepository {
             .map_err(|_| AddReaderError::Backend(lock_poisoned()))?;
 
         if readers.iter().any(|r| r.account == reader.account) {
-            return Err(AddReaderError::AccountAlreadyExists);
+            Err(AddReaderError::AccountAlreadyExists)
         } else {
             readers.push(reader);
             Ok(())
