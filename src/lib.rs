@@ -4,7 +4,7 @@
 //!
 //! - [`schema`]：领域类型本身，纯数据，不依赖其他层。
 //! - [`adapter`]：仓储 trait，描述领域对象需要哪些持久化操作。
-//! - [`infrastructure`]：仓储的具体实现（内存 / txt），实现 [`adapter`] 里的 trait。
+//! - [`infrastructure`]：仓储的具体实现（内存 / txt / json），实现 [`adapter`] 里的 trait。
 //! - [`service`]：业务用例（借书、还书、登录、注册），只依赖上面几层的抽象。
 //!
 //! 命令行界面不在这里——`src/cli/` 由二进制 crate 声明，属于组装根，
@@ -57,4 +57,12 @@ pub use crate::infrastructure::txt_base::{
     txt_base_borrow_record_repo::TXTBaseBorrowRecordRepository,
     txt_base_librarian_repo::TxtBaseLibrarianRepository,
     txt_base_reader_repo::TXTBaseReaderRepository,
+};
+
+// json 实现：数据落盘到 resource/json/*.json
+pub use crate::infrastructure::json_base::{
+    JSONBaseNewError, json_base_book_repo::JSONBaseBookRepository,
+    json_base_borrow_record_repo::JSONBaseBorrowRecordRepository,
+    json_base_librarian_repo::JSONBaseLibrarianRepository,
+    json_base_reader_repo::JSONBaseReaderRepository,
 };

@@ -9,12 +9,12 @@ use crate::{
     infrastructure::{json_base::JSONBaseNewError, lock_poisoned},
 };
 
-pub struct JSONBaseReadderRepository {
+pub struct JSONBaseReaderRepository {
     readers: RwLock<Vec<Reader>>,
     repo_path: String,
 }
 
-impl JSONBaseReadderRepository {
+impl JSONBaseReaderRepository {
     pub fn new(path: &str) -> Result<Self, JSONBaseNewError> {
         if path.trim().is_empty() {
             return Err(JSONBaseNewError::PathIsEmpty);
@@ -29,7 +29,7 @@ impl JSONBaseReadderRepository {
     }
 }
 
-impl ReaderRepository for JSONBaseReadderRepository {
+impl ReaderRepository for JSONBaseReaderRepository {
     fn add(&self, reader: Reader) -> Result<(), AddReaderError> {
         let mut readers = self
             .readers
