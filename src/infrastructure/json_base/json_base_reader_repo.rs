@@ -1,5 +1,5 @@
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{BufReader, BufWriter, Write},
     sync::RwLock,
 };
@@ -48,6 +48,7 @@ impl ReaderRepository for JSONBaseReadderRepository {
                 .map_err(|e| AddReaderError::Backend(Box::new(e)))?;
             writer.flush().map_err(deal_err)?;
             writer.get_ref().sync_all().map_err(deal_err)?;
+            fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
 
             Ok(())
         }
@@ -72,6 +73,7 @@ impl ReaderRepository for JSONBaseReadderRepository {
                 .map_err(|e| UpdateReaderError::Backend(Box::new(e)))?;
             writer.flush().map_err(deal_err)?;
             writer.get_ref().sync_all().map_err(deal_err)?;
+            fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
             Ok(())
         } else {
             Err(UpdateReaderError::NonExistedAccount)

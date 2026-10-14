@@ -1,5 +1,5 @@
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{BufReader, BufWriter, Write},
     sync::RwLock,
 };
@@ -51,6 +51,7 @@ impl BookRepository for JSONBaseBookRepository {
             .map_err(|e| AddBookError::Backend(Box::new(e)))?;
         writer.flush().map_err(deal_err)?;
         writer.get_ref().sync_all().map_err(deal_err)?;
+        fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
         Ok(())
     }
 
@@ -63,12 +64,13 @@ impl BookRepository for JSONBaseBookRepository {
             *b = book;
             let deal_err = |e| UpdateBookError::Backend(Box::new(e));
             let tmp_path = format!("{}.tmp", self.repo_path);
-            let file = File::open(&tmp_path).map_err(deal_err)?;
+            let file = File::create(&tmp_path).map_err(deal_err)?;
             let mut writer = BufWriter::new(file);
             serde_json::to_writer(&mut writer, &*books)
                 .map_err(|e| UpdateBookError::Backend(Box::new(e)))?;
             writer.flush().map_err(deal_err)?;
             writer.get_ref().sync_all().map_err(deal_err)?;
+            fs::rename(&tmp_path, &self.repo_path).map_err(deal_err)?;
 
             Ok(())
         } else {
