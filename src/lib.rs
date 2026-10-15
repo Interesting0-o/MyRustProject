@@ -4,7 +4,7 @@
 //!
 //! - [`schema`]：领域类型本身，纯数据，不依赖其他层。
 //! - [`adapter`]：仓储 trait，描述领域对象需要哪些持久化操作。
-//! - [`infrastructure`]：仓储的具体实现（内存 / txt / json），实现 [`adapter`] 里的 trait。
+//! - [`infrastructure`]：仓储的具体实现（内存 / txt / json / sqlite），实现 [`adapter`] 里的 trait。
 //! - [`service`]：业务用例（借书、还书、登录、注册），只依赖上面几层的抽象。
 //!
 //! 命令行界面不在这里——`src/cli/` 由二进制 crate 声明，属于组装根，
@@ -65,4 +65,12 @@ pub use crate::infrastructure::json_base::{
     json_base_borrow_record_repo::JSONBaseBorrowRecordRepository,
     json_base_librarian_repo::JSONBaseLibrarianRepository,
     json_base_reader_repo::JSONBaseReaderRepository,
+};
+
+// sqlite 实现：数据落盘到 resource/repo.db（四个仓储共享同一个库文件）
+pub use crate::infrastructure::sqlite_base::{
+    SqliteBaseNewError, sqlite_base_book_repo::SqliteBaseBookRepository,
+    sqlite_base_borrow_record_repo::SqliteBaseBorrowRecordRepository,
+    sqlite_base_librarian_repo::SqliteBaseLibrarianRepository,
+    sqlite_base_reader_repo::SqliteBaseReaderRepository,
 };

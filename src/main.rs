@@ -3,8 +3,8 @@ mod cli;
 use std::process;
 
 use book_manager::{
-    JSONBaseBookRepository, JSONBaseBorrowRecordRepository, JSONBaseLibrarianRepository,
-    JSONBaseNewError, JSONBaseReaderRepository,
+    SqliteBaseBookRepository, SqliteBaseBorrowRecordRepository, SqliteBaseLibrarianRepository,
+    SqliteBaseNewError, SqliteBaseReaderRepository,
 };
 
 use crate::cli::{
@@ -14,17 +14,17 @@ use crate::cli::{
     sign_up::sign_up,
 };
 
-/// 默认使用的 json 仓储组：供主循环与各控制器共享。
+/// 默认使用的 sqlite 仓储组：供主循环与各控制器共享。
 struct Repositories {
-    book: JSONBaseBookRepository,
-    reader: JSONBaseReaderRepository,
-    librarian: JSONBaseLibrarianRepository,
-    borrow_record: JSONBaseBorrowRecordRepository,
+    book: SqliteBaseBookRepository,
+    reader: SqliteBaseReaderRepository,
+    librarian: SqliteBaseLibrarianRepository,
+    borrow_record: SqliteBaseBorrowRecordRepository,
 }
 
 fn main() {
-    //仓库初始化：默认使用 json 仓储，数据落盘到 resource/json/*.json
-    let repos = json_repositories();
+    //仓库初始化：默认使用 sqlite 仓储，数据落盘到 resource/repo.db
+    let repos = sqlite_repositories();
 
     //主循环
     loop {
@@ -44,51 +44,37 @@ fn main() {
     }
 }
 
-/// json 仓库生成器：从 `resource/json/` 下加载数据，进程退出后仍然保留。
-fn json_repositories() -> Repositories {
+/// sqlite 仓库生成器：四个仓储共享 `resource/repo.db`，进程退出后仍然保留。
+fn sqlite_repositories() -> Repositories {
+    const DB_PATH: &str = "resource/repo.db";
     Repositories {
-        book: open_json_repo(
-            "图书",
-            "resource/json/books.json",
-            JSONBaseBookRepository::new,
-        ),
-        reader: open_json_repo(
-            "读者",
-            "resource/json/readers.json",
-            JSONBaseReaderRepository::new,
-        ),
-        librarian: open_json_repo(
-            "管理员",
-            "resource/json/librarians.json",
-            JSONBaseLibrarianRepository::new,
-        ),
-        borrow_record: open_json_repo(
+        book: open_sqlite_repo("图书", DB_PATH, SqliteBaseBookRepository::new),
+        reader: open_sqlite_repo("读者", DB_PATH, SqliteBaseReaderRepository::new),
+        librarian: open_sqlite_repo("管理员", DB_PATH, SqliteBaseLibrarianRepository::new),
+        borrow_record: open_sqlite_repo(
             "借阅记录",
-            "resource/json/borrow_records.json",
-            JSONBaseBorrowRecordRepository::new,
+            DB_PATH,
+            SqliteBaseBorrowRecordRepository::new,
         ),
     }
 }
 
-/// 构造一个 json 仓储；失败时打印原因并结束进程。
-fn open_json_repo<T>(
+/// 构造一个 sqlite 仓储；失败时打印原因并结束进程。
+fn open_sqlite_repo<T>(
     name: &str,
     path: &str,
-    open: impl FnOnce(&str) -> Result<T, JSONBaseNewError>,
+    open: impl FnOnce(&str) -> Result<T, SqliteBaseNewError>,
 ) -> T {
     match open(path) {
         Ok(repo) => repo,
-        Err(JSONBaseNewError::PathIsEmpty) => {
+        Err(SqliteBaseNewError::PathIsEmpty) => {
             eprintln!("{name}仓储路径为空：{path}");
             process::exit(1);
         }
-        Err(JSONBaseNewError::OpenFailed(e)) => {
-            eprintln!("打开{name}仓储文件失败：{path}：{e}");
-            process::exit(1);
-        }
-        Err(JSONBaseNewError::ParseFailed) => {
-            eprintln!("解析{name}仓储文件失败：{path}");
+        Err(SqliteBaseNewError::ConnectError(e)) => {
+            eprintln!("连接{name}仓储失败：{path}：{e}");
             process::exit(1);
         }
     }
 }
+
