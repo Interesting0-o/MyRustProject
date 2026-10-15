@@ -7,6 +7,9 @@ pub mod txt_base;
 //基于json读取的仓库
 pub mod json_base;
 
+//基于sqlite连接的仓库
+pub mod sqlite_base;
+
 use crate::BackendError;
 
 /// 把锁中毒统一包装成仓储故障。

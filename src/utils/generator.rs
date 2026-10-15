@@ -11,7 +11,7 @@ pub fn generator_book_from_str(s: &str) -> Result<Book, GeneratorError> {
     };
 
     let num = num
-        .parse::<usize>()
+        .parse::<u32>()
         .map_err(|_| GeneratorError::WrongParamType)?;
     let price = price
         .parse::<i64>()

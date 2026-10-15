@@ -6,5 +6,5 @@ pub struct Book {
     pub bid: String,
     pub name: String,
     pub price: i64,
-    pub num: usize,
+    pub num: u32,
 }

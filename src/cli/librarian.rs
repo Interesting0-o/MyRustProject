@@ -64,7 +64,7 @@ where
     let bid = read_line("请输入书籍编号:");
     let author = read_line("请输入书籍作者:");
     let price = read_price("请输入书籍价格(元，最多两位小数):");
-    let num = read_usize("请输入书籍数目:");
+    let num = read_u32("请输入书籍数目:");
 
     let book = Book {
         name,
@@ -103,7 +103,7 @@ where
     };
     println!("当前《{}》剩余数量:{}", book.name, book.num);
 
-    book.num = read_usize("请输入新的书籍数目:");
+    book.num = read_u32("请输入新的书籍数目:");
 
     match book_repo.update(book) {
         Ok(()) => println!("变更成功!"),
@@ -123,10 +123,10 @@ fn read_line(prompt: &str) -> String {
     input.trim().to_string()
 }
 
-/// 反复询问，直到读到合法的 `usize`。
-fn read_usize(prompt: &str) -> usize {
+/// 反复询问，直到读到合法的 `u32`。
+fn read_u32(prompt: &str) -> u32 {
     loop {
-        match read_line(prompt).parse::<usize>() {
+        match read_line(prompt).parse::<u32>() {
             Ok(n) => return n,
             Err(_) => println!("请输入有效值!"),
         }
