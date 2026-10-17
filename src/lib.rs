@@ -31,6 +31,7 @@ pub use crate::adapter::{
         AddLibrarianError, FindLibrarianError, LibrarianRepository, UpdateLibrarianError,
     },
     reader_repo::{AddReaderError, FindReaderError, ReaderRepository, UpdateReaderError},
+    unit_of_work::{RepositoryGroup, UnitOfWork, UnitOfWorkError},
 };
 
 // ---- 业务用例 ----
@@ -69,7 +70,7 @@ pub use crate::infrastructure::json_base::{
 
 // sqlite 实现：数据落盘到 resource/repo.db（四个仓储共享同一个库文件）
 pub use crate::infrastructure::sqlite_base::{
-    SqliteBaseNewError, sqlite_base_book_repo::SqliteBaseBookRepository,
+    SqliteBaseNewError, SqliteUnitOfWork, sqlite_base_book_repo::SqliteBaseBookRepository,
     sqlite_base_borrow_record_repo::SqliteBaseBorrowRecordRepository,
     sqlite_base_librarian_repo::SqliteBaseLibrarianRepository,
     sqlite_base_reader_repo::SqliteBaseReaderRepository,

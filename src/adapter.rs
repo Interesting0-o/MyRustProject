@@ -7,6 +7,7 @@ pub mod book_repo;
 pub mod borrow_record_repo;
 pub mod librarian_repo;
 pub mod reader_repo;
+pub mod unit_of_work;
 
 /// 后端（仓储实现）故障的载体：连接中断、IO、序列化、锁中毒等，全部归到这一个不透明类型。
 ///
