@@ -2,32 +2,41 @@ use rusqlite::{Connection, OptionalExtension, Row, ffi::SQLITE_CONSTRAINT_PRIMAR
 
 use crate::{
     AddLibrarianError, FindLibrarianError, Librarian, LibrarianRepository, UpdateLibrarianError,
-    infrastructure::sqlite_base::SqliteBaseNewError,
+    infrastructure::sqlite_base::{ForSqlRepo, SqliteBaseNewError},
 };
 
-#[derive(Debug)]
-pub struct SqliteBaseLibrarianRepository {
-    librarian_conn: Connection,
+pub struct SqliteBaseLibrarianRepository<'a, T>
+where
+    T: ForSqlRepo,
+{
+    librarian_conn: &'a T,
 }
 
-impl SqliteBaseLibrarianRepository {
-    pub fn new(path: &str) -> Result<Self, SqliteBaseNewError> {
-        if path.trim().is_empty() {
-            return Err(SqliteBaseNewError::PathIsEmpty);
-        }
-        let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS librarian (
-                account TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                hash_pwd INTEGER NOT NULL
-            );",
-            [],
-        )
-        .map_err(SqliteBaseNewError::ConnectError)?;
-        Ok(Self {
+pub fn new_librarian_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
+    if path.trim().is_empty() {
+        return Err(SqliteBaseNewError::PathIsEmpty);
+    }
+    let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS librarian (
+            account TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            hash_pwd INTEGER NOT NULL
+        );",
+        [],
+    )
+    .map_err(SqliteBaseNewError::ConnectError)?;
+    Ok(conn)
+}
+
+impl<'a, T> SqliteBaseLibrarianRepository<'a, T>
+where
+    T: ForSqlRepo,
+{
+    pub fn new(conn: &'a T) -> Self {
+        Self {
             librarian_conn: conn,
-        })
+        }
     }
 }
 
@@ -39,9 +48,13 @@ fn read_librarian(row: &Row<'_>) -> rusqlite::Result<Librarian> {
     })
 }
 
-impl LibrarianRepository for SqliteBaseLibrarianRepository {
+impl<'a, T> LibrarianRepository for SqliteBaseLibrarianRepository<'a, T>
+where
+    T: ForSqlRepo,
+{
     fn add(&self, librarian: Librarian) -> Result<(), AddLibrarianError> {
         self.librarian_conn
+            .conn()
             .execute(
                 "INSERT INTO librarian (account, name, hash_pwd) VALUES (?1, ?2, ?3);",
                 params![librarian.account, librarian.name, librarian.hash_pwd as i64],
@@ -60,6 +73,7 @@ impl LibrarianRepository for SqliteBaseLibrarianRepository {
     fn find_librarian_by_account(&self, account: &str) -> Result<Librarian, FindLibrarianError> {
         if let Some(librarian) = self
             .librarian_conn
+            .conn()
             .query_row(
                 "SELECT * FROM librarian WHERE account = ?1;",
                 params![account],
@@ -77,6 +91,7 @@ impl LibrarianRepository for SqliteBaseLibrarianRepository {
     fn find_librarian_by_name(&self, name: &str) -> Result<Vec<Librarian>, FindLibrarianError> {
         let mut stmt = self
             .librarian_conn
+            .conn()
             .prepare("SELECT * FROM librarian WHERE name = ?1;")
             .map_err(|e| FindLibrarianError::Backend(Box::new(e)))?;
         let rows = stmt
@@ -95,6 +110,7 @@ impl LibrarianRepository for SqliteBaseLibrarianRepository {
     fn update(&self, librarian: Librarian) -> Result<(), UpdateLibrarianError> {
         let row = self
             .librarian_conn
+            .conn()
             .execute(
                 "UPDATE librarian SET name=?1, hash_pwd=?2 WHERE account = ?3;",
                 params![librarian.name, librarian.hash_pwd as i64, librarian.account],
@@ -107,4 +123,3 @@ impl LibrarianRepository for SqliteBaseLibrarianRepository {
         }
     }
 }
-
