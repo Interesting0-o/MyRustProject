@@ -1,14 +1,8 @@
 use std::io;
 
-use book_manager::{
-    LibrarianRepository, ReaderRepository, SignUpRes, librarian_sign_up, reader_sign_up,
-};
+use book_manager::{SignUpRes, UnitOfWork, librarian_sign_up, reader_sign_up};
 
-pub fn sign_up<R, L>(reader_repo: &R, librarian_repo: &L)
-where
-    R: ReaderRepository,
-    L: LibrarianRepository,
-{
+pub fn sign_up<U: UnitOfWork>(uow: &U) {
     let mut identity = String::new();
 
     let mut account = String::new();
@@ -43,9 +37,9 @@ where
                 }
 
                 let res = if n == 1 {
-                    reader_sign_up(reader_repo, name.trim(), account.trim(), pwd.trim())
+                    reader_sign_up(uow, name.trim(), account.trim(), pwd.trim())
                 } else {
-                    librarian_sign_up(librarian_repo, name.trim(), account.trim(), pwd.trim())
+                    librarian_sign_up(uow, name.trim(), account.trim(), pwd.trim())
                 };
 
                 match res {

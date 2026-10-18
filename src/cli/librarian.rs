@@ -7,7 +7,7 @@ use book_manager::{AddBookError, Book, BookRepository, FindBookError, UpdateBook
 /// 管理员菜单主循环：只负责打印菜单、读选择、分发到具体流程。
 pub fn librarian_contrl<B>(book_repo: &B)
 where
-    B: BookRepository,
+    B: BookRepository + ?Sized,
 {
     let mut choice = String::new();
     loop {
@@ -28,7 +28,7 @@ where
 /// 按书名查询并打印所有同名图书。
 fn search_books<B>(book_repo: &B)
 where
-    B: BookRepository,
+    B: BookRepository + ?Sized,
 {
     let book_name = read_line("请输入书籍名称:");
     let Ok(query_res) = book_repo.find_book_by_name(&book_name) else {
@@ -58,7 +58,7 @@ where
 /// 读取新书信息并入库。
 fn add_book<B>(book_repo: &B)
 where
-    B: BookRepository,
+    B: BookRepository + ?Sized,
 {
     let name = read_line("请输入书名:");
     let bid = read_line("请输入书籍编号:");
@@ -85,7 +85,7 @@ where
 /// 按编号找到图书，把它的剩余数量改成用户输入的新值。
 fn update_book_num<B>(book_repo: &B)
 where
-    B: BookRepository,
+    B: BookRepository + ?Sized,
 {
     let book_bid = read_line("请输入要变更数目的书籍编号:");
 

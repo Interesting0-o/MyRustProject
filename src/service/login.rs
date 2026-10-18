@@ -1,5 +1,5 @@
 use crate::{
-    BackendError, Librarian, LibrarianRepository, Reader, ReaderRepository,
+    BackendError, Librarian, Reader, UnitOfWork,
     adapter::{librarian_repo::FindLibrarianError, reader_repo::FindReaderError},
 };
 
@@ -10,11 +10,13 @@ pub enum LoginError {
     RepositoryError(BackendError),
 }
 
-pub fn reader_login<R: ReaderRepository>(
-    reader_repo: &R,
+pub fn reader_login<U: UnitOfWork>(
+    uow: &U,
     account: &str,
     pwd: &str,
 ) -> Result<Reader, LoginError> {
+    let repo_group = uow.repositories();
+    let reader_repo = repo_group.reader();
     match reader_repo.find_reader_by_account(account) {
         Ok(r) if r.hash_pwd == str_hash(pwd) => Ok(r),
         Ok(_) => Err(LoginError::PasswordError),
@@ -23,11 +25,13 @@ pub fn reader_login<R: ReaderRepository>(
     }
 }
 
-pub fn librarian_login<L: LibrarianRepository>(
-    librarian_repo: &L,
+pub fn librarian_login<U: UnitOfWork>(
+    uow: &U,
     account: &str,
     pwd: &str,
 ) -> Result<Librarian, LoginError> {
+    let repo_group = uow.repositories();
+    let librarian_repo = repo_group.librarian();
     match librarian_repo.find_librarian_by_account(account) {
         Ok(l) if l.hash_pwd == str_hash(pwd) => Ok(l),
         Ok(_) => Err(LoginError::PasswordError),

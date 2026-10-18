@@ -1,6 +1,6 @@
 use crate::{
-    AddLibrarianError, AddReaderError, BackendError, Librarian, LibrarianRepository, Reader,
-    ReaderRepository, service::login::str_hash,
+    AddLibrarianError, AddReaderError, BackendError, Librarian, Reader, UnitOfWork,
+    service::login::str_hash,
 };
 
 pub enum SignUpRes {
@@ -9,20 +9,19 @@ pub enum SignUpRes {
     RepositoryError(BackendError),
 }
 
-pub fn reader_sign_up<R>(
-    reader_repo: &R,
+pub fn reader_sign_up<U: UnitOfWork>(
+    uow: &U,
     name: &str,
     account: &str,
     pwd: &str,
-) -> Result<(), SignUpRes>
-where
-    R: ReaderRepository,
-{
+) -> Result<(), SignUpRes> {
     let reader = Reader {
         account: account.to_string(),
         name: name.to_string(),
         hash_pwd: str_hash(pwd),
     };
+    let repo_group = uow.repositories();
+    let reader_repo = repo_group.reader();
     match reader_repo.add(reader) {
         Ok(()) => Ok(()),
         Err(AddReaderError::AccountAlreadyExists) => Err(SignUpRes::AccountAlreadyExists),
@@ -30,20 +29,19 @@ where
     }
 }
 
-pub fn librarian_sign_up<L>(
-    librarian_repo: &L,
+pub fn librarian_sign_up<U: UnitOfWork>(
+    uow: &U,
     name: &str,
     account: &str,
     pwd: &str,
-) -> Result<(), SignUpRes>
-where
-    L: LibrarianRepository,
-{
+) -> Result<(), SignUpRes> {
     let librarian = Librarian {
         account: account.to_string(),
         name: name.to_string(),
         hash_pwd: str_hash(pwd),
     };
+    let repo_group = uow.repositories();
+    let librarian_repo = repo_group.librarian();
     match librarian_repo.add(librarian) {
         Ok(()) => Ok(()),
         Err(AddLibrarianError::AccountAlreadyExists) => Err(SignUpRes::AccountAlreadyExists),

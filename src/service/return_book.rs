@@ -1,5 +1,5 @@
 use crate::{
-    Book, BookRepository, BorrowRecordRepository, FindBookError,
+    Book, FindBookError, UnitOfWork, UnitOfWorkError,
     adapter::{
         book_repo::UpdateBookError,
         borrow_record_repo::{FindBorrowRecordError, RemoveBorrowRecordError},
@@ -19,41 +19,45 @@ pub enum ReturnBookError {
     RemoveBorrowRecordError(RemoveBorrowRecordError),
 }
 
-pub fn return_book<B, BR>(
-    book_repo: &B,
-    borrow_record_repo: &BR,
-    bid: &str,
+pub fn return_book<U: UnitOfWork>(
+    uow: &mut U,
     account: &str,
-) -> Result<(), ReturnBookError>
-where
-    B: BookRepository,
-    BR: BorrowRecordRepository,
-{
-    let book = match book_repo.find_book_by_bid(bid) {
-        Ok(book) => book,
-        Err(FindBookError::NoResult) => return Err(ReturnBookError::NonExistBID),
-        Err(e) => return Err(ReturnBookError::RepositoryError(e)),
-    };
+    bid: &str,
+) -> Result<(), ReturnBookError> {
+    uow.transaction(|repository_group| {
+        let book_repo = repository_group.book();
+        let borrow_record_repo = repository_group.borrow_record();
 
-    let record = match borrow_record_repo.find_records_by_account_and_bid(account, bid) {
-        Ok(records) => match records.into_iter().next() {
-            Some(record) => record,
-            None => return Err(ReturnBookError::NotFoundRecord),
-        },
-        Err(FindBorrowRecordError::NoResult) => return Err(ReturnBookError::NotFoundRecord),
-        Err(e) => return Err(ReturnBookError::FindBorrowRecordError(e)),
-    };
+        let book = match book_repo.find_book_by_bid(bid) {
+            Ok(book) => book,
+            Err(FindBookError::NoResult) => return Err(ReturnBookError::NonExistBID),
+            Err(e) => return Err(ReturnBookError::RepositoryError(e)),
+        };
 
-    book_repo
-        .update(Book {
-            num: book.num + 1,
-            ..book
-        })
-        .map_err(ReturnBookError::UpdateBookError)?;
+        let record = match borrow_record_repo.find_records_by_account_and_bid(account, bid) {
+            Ok(records) => match records.into_iter().next() {
+                Some(record) => record,
+                None => return Err(ReturnBookError::NotFoundRecord),
+            },
+            Err(FindBorrowRecordError::NoResult) => return Err(ReturnBookError::NotFoundRecord),
+            Err(e) => return Err(ReturnBookError::FindBorrowRecordError(e)),
+        };
 
-    borrow_record_repo
-        .remove(&record.br_id)
-        .map_err(ReturnBookError::RemoveBorrowRecordError)?;
+        book_repo
+            .update(Book {
+                num: book.num + 1,
+                ..book
+            })
+            .map_err(ReturnBookError::UpdateBookError)?;
 
-    Ok(())
+        borrow_record_repo
+            .remove(&record.br_id)
+            .map_err(ReturnBookError::RemoveBorrowRecordError)?;
+
+        Ok(())
+    })
+    .map_err(|e| match e {
+        UnitOfWorkError::Transaction(e) => e,
+        UnitOfWorkError::Backend(e) => ReturnBookError::RepositoryError(FindBookError::Backend(e)),
+    })
 }

@@ -2,10 +2,7 @@
 
 use std::io;
 
-use book_manager::{
-    Librarian, LibrarianRepository, LoginError, Reader, ReaderRepository, librarian_login,
-    reader_login,
-};
+use book_manager::{Librarian, LoginError, Reader, UnitOfWork, librarian_login, reader_login};
 
 /// `login` 的结果：登录成功后的当前用户、用户选择注册，或用户选择退出。
 pub enum LoginResult {
@@ -16,11 +13,7 @@ pub enum LoginResult {
     Quit,
 }
 
-pub fn login<R, L>(reader_repo: &R, librarian_repo: &L) -> LoginResult
-where
-    R: ReaderRepository,
-    L: LibrarianRepository,
-{
+pub fn login<U: UnitOfWork>(uow: &U) -> LoginResult {
     let mut login_state: String = String::new();
     let mut account: String = String::new();
     let mut pwd: String = String::new();
@@ -55,7 +48,7 @@ where
 
             //根据
             if input == b'1' {
-                match reader_login(reader_repo, account.trim(), pwd.trim()) {
+                match reader_login(uow, account.trim(), pwd.trim()) {
                     Ok(r) => break LoginResult::ReaderUser(r),
                     Err(LoginError::RepositoryError(e)) => {
                         println!("登录服务异常: {e}");
@@ -67,7 +60,7 @@ where
                     }
                 }
             } else if input == b'2' {
-                match librarian_login(librarian_repo, account.trim(), pwd.trim()) {
+                match librarian_login(uow, account.trim(), pwd.trim()) {
                     Ok(l) => break LoginResult::LibrarianUser(l),
                     Err(LoginError::RepositoryError(e)) => {
                         println!("登录服务异常: {e}");
