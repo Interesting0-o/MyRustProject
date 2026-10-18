@@ -1,36 +1,30 @@
 //! [`ReaderRepository`] 的内存实现。
+
 use crate::{
     AddReaderError, Reader, ReaderRepository, UpdateReaderError,
-    adapter::reader_repo::FindReaderError, infrastructure::lock_poisoned,
+    adapter::reader_repo::FindReaderError,
+    infrastructure::{in_memory::InMemoryStore, lock_poisoned},
 };
-use std::sync::RwLock;
 
-/// 基于 `Vec` 的读者仓储，数据仅保存在进程内存中，重启即丢失。
+/// 基于内存的读者仓储，数据由 [`InMemoryStore`] 统一持有。
 ///
 /// 所有查找均为线性扫描（O(n)），适用于数据量小的场景。
-pub struct InMemoryReaderRepository {
-    readers: RwLock<Vec<Reader>>,
+pub struct InMemoryReaderRepository<'a> {
+    store: &'a InMemoryStore,
 }
 
-impl InMemoryReaderRepository {
-    /// 构造一个空仓储。构造不属于 [`ReaderRepository`] 契约。
-    pub fn new() -> Self {
-        Self {
-            readers: RwLock::new(Vec::new()),
-        }
+impl<'a> InMemoryReaderRepository<'a> {
+    /// 构造一个借用底层存储的仓储。构造不属于 [`ReaderRepository`] 契约。
+    pub fn new(store: &'a InMemoryStore) -> Self {
+        Self { store }
     }
 }
 
-impl Default for InMemoryReaderRepository {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl ReaderRepository for InMemoryReaderRepository {
+impl ReaderRepository for InMemoryReaderRepository<'_> {
     /// 先扫描 `account` 是否已被占用，没有才追加到末尾。
     fn add(&self, reader: Reader) -> Result<(), AddReaderError> {
         let mut readers = self
+            .store
             .readers
             .write()
             .map_err(|_| AddReaderError::Backend(lock_poisoned()))?;
@@ -46,6 +40,7 @@ impl ReaderRepository for InMemoryReaderRepository {
     /// 按 `account` 定位后整体覆盖（`account` 只能与定位时用的值相同）。
     fn update(&self, reader: Reader) -> Result<(), UpdateReaderError> {
         let mut readers = self
+            .store
             .readers
             .write()
             .map_err(|_| UpdateReaderError::Backend(lock_poisoned()))?;
@@ -60,6 +55,7 @@ impl ReaderRepository for InMemoryReaderRepository {
     /// 返回命中读者的克隆副本，调用方修改不会影响仓储内部数据。
     fn find_reader_by_account(&self, account: &str) -> Result<Reader, FindReaderError> {
         let readers = self
+            .store
             .readers
             .read()
             .map_err(|_| FindReaderError::Backend(lock_poisoned()))?;
@@ -73,6 +69,7 @@ impl ReaderRepository for InMemoryReaderRepository {
     /// 收集所有姓名完全匹配的读者，结果为克隆副本。
     fn find_reader_by_name(&self, name: &str) -> Result<Vec<Reader>, FindReaderError> {
         let readers = self
+            .store
             .readers
             .read()
             .map_err(|_| FindReaderError::Backend(lock_poisoned()))?;

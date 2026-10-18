@@ -46,7 +46,7 @@ pub use crate::service::{
 
 // 内存实现：数据只存在进程内，重启即丢失
 pub use crate::infrastructure::in_memory::{
-    in_memory_book_repository::InMemoryBookRepository,
+    InMemoryStore, InMemoryUnitOfWork, in_memory_book_repository::InMemoryBookRepository,
     in_memory_borrow_record_repository::InMemoryBorrowRecordRepository,
     in_memory_librarian_repository::InMemoryLibrarianRepository,
     in_memory_reader_repository::InMemoryReaderRepository,
@@ -70,7 +70,8 @@ pub use crate::infrastructure::json_base::{
 
 // sqlite 实现：数据落盘到 resource/repo.db（四个仓储共享同一个库文件）
 pub use crate::infrastructure::sqlite_base::{
-    SqliteBaseNewError, SqliteUnitOfWork, sqlite_base_book_repo::SqliteBaseBookRepository,
+    SqliteBaseNewError, SqliteUnitOfWork, new_sqlite_unit_of_work,
+    sqlite_base_book_repo::SqliteBaseBookRepository,
     sqlite_base_borrow_record_repo::SqliteBaseBorrowRecordRepository,
     sqlite_base_librarian_repo::SqliteBaseLibrarianRepository,
     sqlite_base_reader_repo::SqliteBaseReaderRepository,

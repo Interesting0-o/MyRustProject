@@ -1,49 +1,39 @@
 //! [`BorrowRecordRepository`] 的内存实现。
 
-use std::sync::{Mutex, RwLock};
-
 use crate::{
     BorrowRecord, BorrowRecordRepository, RemoveBorrowRecordError,
     adapter::borrow_record_repo::{AddBorrowRecordError, FindBorrowRecordError},
-    infrastructure::lock_poisoned,
+    infrastructure::{in_memory::InMemoryStore, lock_poisoned},
 };
 
-/// 基于 `Vec` 的借阅记录仓储，数据仅保存在进程内存中，重启即丢失。
+/// 基于内存的借阅记录仓储，数据由 [`InMemoryStore`] 统一持有。
 ///
 /// 所有查找均为线性扫描（O(n)），适用于数据量小的场景。
-pub struct InMemoryBorrowRecordRepository {
-    records: RwLock<Vec<BorrowRecord>>,
-    pk_record: Mutex<u64>,
+pub struct InMemoryBorrowRecordRepository<'a> {
+    store: &'a InMemoryStore,
 }
 
-impl InMemoryBorrowRecordRepository {
-    /// 构造一个空仓储。构造不属于 [`BorrowRecordRepository`] 契约。
-    pub fn new() -> Self {
-        Self {
-            records: RwLock::new(Vec::new()),
-            pk_record: Mutex::new(0),
-        }
+impl<'a> InMemoryBorrowRecordRepository<'a> {
+    /// 构造一个借用底层存储的仓储。构造不属于 [`BorrowRecordRepository`] 契约。
+    pub fn new(store: &'a InMemoryStore) -> Self {
+        Self { store }
     }
 }
 
-impl Default for InMemoryBorrowRecordRepository {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
+impl BorrowRecordRepository for InMemoryBorrowRecordRepository<'_> {
     fn add(&self, account: &str, bid: &str) -> Result<(), AddBorrowRecordError> {
         let mut records = self
-            .records
+            .store
+            .borrow_records
             .write()
             .map_err(|_| AddBorrowRecordError::Backend(lock_poisoned()))?;
-        let mut pk_record = self
-            .pk_record
+        let mut next_br_id = self
+            .store
+            .next_br_id
             .lock()
             .map_err(|_| AddBorrowRecordError::Backend(lock_poisoned()))?;
-        *pk_record += 1;
-        let br_id = format!("BR{}", *pk_record);
+        *next_br_id += 1;
+        let br_id = format!("BR{}", *next_br_id);
         if records.iter().any(|r| r.br_id == br_id) {
             return Err(AddBorrowRecordError::BRIdIsAlreadyExiste);
         }
@@ -57,7 +47,8 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
 
     fn remove(&self, br_id: &str) -> Result<(), RemoveBorrowRecordError> {
         let mut records = self
-            .records
+            .store
+            .borrow_records
             .write()
             .map_err(|_| RemoveBorrowRecordError::Backend(lock_poisoned()))?;
 
@@ -72,7 +63,8 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
 
     fn find_record_by_brid(&self, br_id: &str) -> Result<BorrowRecord, FindBorrowRecordError> {
         let records = self
-            .records
+            .store
+            .borrow_records
             .read()
             .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         if let Some(br) = records.iter().find(|b| b.br_id == br_id).cloned() {
@@ -84,7 +76,8 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
 
     fn find_records_by_bid(&self, bid: &str) -> Result<Vec<BorrowRecord>, FindBorrowRecordError> {
         let records = self
-            .records
+            .store
+            .borrow_records
             .read()
             .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> =
@@ -102,7 +95,8 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         account: &str,
     ) -> Result<Vec<BorrowRecord>, FindBorrowRecordError> {
         let records = self
-            .records
+            .store
+            .borrow_records
             .read()
             .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
         let query_res: Vec<BorrowRecord> = records
@@ -123,12 +117,13 @@ impl BorrowRecordRepository for InMemoryBorrowRecordRepository {
         account: &str,
         bid: &str,
     ) -> Result<Vec<BorrowRecord>, FindBorrowRecordError> {
-        let record = self
-            .records
+        let records = self
+            .store
+            .borrow_records
             .read()
             .map_err(|_| FindBorrowRecordError::Backend(lock_poisoned()))?;
 
-        let query_res: Vec<BorrowRecord> = record
+        let query_res: Vec<BorrowRecord> = records
             .iter()
             .filter(|br| br.account == account && br.bid == bid)
             .cloned()

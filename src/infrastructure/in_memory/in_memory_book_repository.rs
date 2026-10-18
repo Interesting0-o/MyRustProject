@@ -1,29 +1,23 @@
 use crate::{
     AddBookError, Book, BookRepository, FindBookError, UpdateBookError,
-    infrastructure::lock_poisoned,
+    infrastructure::{in_memory::InMemoryStore, lock_poisoned},
 };
-use std::sync::RwLock;
 
-pub struct InMemoryBookRepository {
-    books: RwLock<Vec<Book>>,
+/// 基于内存的图书仓储，数据由 [`InMemoryStore`] 统一持有。
+pub struct InMemoryBookRepository<'a> {
+    store: &'a InMemoryStore,
 }
 
-impl InMemoryBookRepository {
-    pub fn new() -> Self {
-        Self {
-            books: RwLock::new(Vec::new()),
-        }
-    }
-}
-impl Default for InMemoryBookRepository {
-    fn default() -> Self {
-        Self::new()
+impl<'a> InMemoryBookRepository<'a> {
+    pub fn new(store: &'a InMemoryStore) -> Self {
+        Self { store }
     }
 }
 
-impl BookRepository for InMemoryBookRepository {
+impl BookRepository for InMemoryBookRepository<'_> {
     fn add(&self, book: Book) -> Result<(), AddBookError> {
         let mut books = self
+            .store
             .books
             .write()
             .map_err(|_| AddBookError::Backend(lock_poisoned()))?;
@@ -37,6 +31,7 @@ impl BookRepository for InMemoryBookRepository {
 
     fn update(&self, book: Book) -> Result<(), UpdateBookError> {
         let mut books = self
+            .store
             .books
             .write()
             .map_err(|_| UpdateBookError::Backend(lock_poisoned()))?;
@@ -50,6 +45,7 @@ impl BookRepository for InMemoryBookRepository {
 
     fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError> {
         let books = self
+            .store
             .books
             .read()
             .map_err(|_| FindBookError::Backend(lock_poisoned()))?;
@@ -62,6 +58,7 @@ impl BookRepository for InMemoryBookRepository {
 
     fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, FindBookError> {
         let books = self
+            .store
             .books
             .read()
             .map_err(|_| FindBookError::Backend(lock_poisoned()))?;

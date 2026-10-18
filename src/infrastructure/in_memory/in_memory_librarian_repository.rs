@@ -2,35 +2,29 @@
 
 use crate::{
     AddLibrarianError, Librarian, LibrarianRepository, UpdateLibrarianError,
-    adapter::librarian_repo::FindLibrarianError, infrastructure::lock_poisoned,
+    adapter::librarian_repo::FindLibrarianError,
+    infrastructure::{in_memory::InMemoryStore, lock_poisoned},
 };
-use std::sync::RwLock;
-/// 基于 `Vec` 的管理员仓储，数据仅保存在进程内存中，重启即丢失。
+
+/// 基于内存的管理员仓储，数据由 [`InMemoryStore`] 统一持有。
 ///
 /// 所有查找均为线性扫描（O(n)），适用于数据量小的场景。
-pub struct InMemoryLibrarianRepository {
-    librarians: RwLock<Vec<Librarian>>,
+pub struct InMemoryLibrarianRepository<'a> {
+    store: &'a InMemoryStore,
 }
 
-impl InMemoryLibrarianRepository {
-    /// 构造一个空仓储。构造不属于 [`LibrarianRepository`] 契约。
-    pub fn new() -> Self {
-        Self {
-            librarians: RwLock::new(Vec::new()),
-        }
+impl<'a> InMemoryLibrarianRepository<'a> {
+    /// 构造一个借用底层存储的仓储。构造不属于 [`LibrarianRepository`] 契约。
+    pub fn new(store: &'a InMemoryStore) -> Self {
+        Self { store }
     }
 }
 
-impl Default for InMemoryLibrarianRepository {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl LibrarianRepository for InMemoryLibrarianRepository {
+impl LibrarianRepository for InMemoryLibrarianRepository<'_> {
     /// 先扫描 `account` 是否已被占用，没有才追加到末尾。
     fn add(&self, librarian: Librarian) -> Result<(), AddLibrarianError> {
         let mut librarians = self
+            .store
             .librarians
             .write()
             .map_err(|_| AddLibrarianError::Backend(lock_poisoned()))?;
@@ -45,6 +39,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
     /// 按 `account` 定位后整体覆盖（`account` 只能与定位时用的值相同）。
     fn update(&self, librarian: Librarian) -> Result<(), UpdateLibrarianError> {
         let mut librarians = self
+            .store
             .librarians
             .write()
             .map_err(|_| UpdateLibrarianError::Backend(lock_poisoned()))?;
@@ -62,6 +57,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
     /// 返回命中管理员的克隆副本，调用方修改不会影响仓储内部数据。
     fn find_librarian_by_account(&self, account: &str) -> Result<Librarian, FindLibrarianError> {
         let librarians = self
+            .store
             .librarians
             .read()
             .map_err(|_| FindLibrarianError::Backend(lock_poisoned()))?;
@@ -75,6 +71,7 @@ impl LibrarianRepository for InMemoryLibrarianRepository {
     /// 收集所有姓名完全匹配的管理员，结果为克隆副本。
     fn find_librarian_by_name(&self, name: &str) -> Result<Vec<Librarian>, FindLibrarianError> {
         let librarians = self
+            .store
             .librarians
             .read()
             .map_err(|_| FindLibrarianError::Backend(lock_poisoned()))?;
