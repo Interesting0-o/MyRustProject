@@ -3,14 +3,11 @@ use rusqlite::{Connection, OptionalExtension, Row, ffi::SQLITE_CONSTRAINT_PRIMAR
 use crate::{
     BorrowRecord, BorrowRecordRepository, RemoveBorrowRecordError,
     adapter::borrow_record_repo::{AddBorrowRecordError, FindBorrowRecordError},
-    infrastructure::sqlite_base::{ForSqlRepo, SqliteBaseNewError},
+    infrastructure::sqlite_base::SqliteBaseNewError,
 };
 
-pub struct SqliteBaseBorrowRecordRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    br_conn: &'a T,
+pub struct SqliteBaseBorrowRecordRepository<'a> {
+    br_conn: &'a Connection,
 }
 
 pub fn new_borrow_record_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
@@ -18,7 +15,12 @@ pub fn new_borrow_record_table(path: &str) -> Result<Connection, SqliteBaseNewEr
         return Err(SqliteBaseNewError::PathIsEmpty);
     }
     let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
+    create_borrow_record_table(&conn)?;
 
+    Ok(conn)
+}
+
+pub(crate) fn create_borrow_record_table(conn: &Connection) -> Result<(), SqliteBaseNewError> {
     conn.pragma_update(None, "foreign_keys", true)
         .map_err(SqliteBaseNewError::ConnectError)?;
 
@@ -34,14 +36,11 @@ pub fn new_borrow_record_table(path: &str) -> Result<Connection, SqliteBaseNewEr
     )
     .map_err(SqliteBaseNewError::ConnectError)?;
 
-    Ok(conn)
+    Ok(())
 }
 
-impl<'a, T> SqliteBaseBorrowRecordRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    pub fn new(conn: &'a T) -> Self {
+impl<'a> SqliteBaseBorrowRecordRepository<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
         Self { br_conn: conn }
     }
 
@@ -52,7 +51,6 @@ where
     ) -> Result<Vec<BorrowRecord>, FindBorrowRecordError> {
         let mut stmt = self
             .br_conn
-            .conn()
             .prepare(sql)
             .map_err(|e| FindBorrowRecordError::Backend(Box::new(e)))?;
         let records = stmt
@@ -80,13 +78,9 @@ fn parse_br_id(br_id: &str) -> Option<i64> {
     br_id.strip_prefix("BR")?.parse().ok()
 }
 
-impl<'a, T> BorrowRecordRepository for SqliteBaseBorrowRecordRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
+impl BorrowRecordRepository for SqliteBaseBorrowRecordRepository<'_> {
     fn add(&self, account: &str, bid: &str) -> Result<(), AddBorrowRecordError> {
         self.br_conn
-            .conn()
             .execute(
                 "INSERT INTO borrow_record (account, bid) VALUES (?1, ?2);",
                 params![account, bid],
@@ -108,7 +102,6 @@ where
         };
         let row = self
             .br_conn
-            .conn()
             .execute("DELETE FROM borrow_record WHERE br_id = ?1;", params![id])
             .map_err(|e| RemoveBorrowRecordError::Backend(Box::new(e)))?;
         if row == 0 {
@@ -124,7 +117,6 @@ where
         };
         if let Some(record) = self
             .br_conn
-            .conn()
             .query_row(
                 "SELECT * FROM borrow_record WHERE br_id = ?1;",
                 params![id],

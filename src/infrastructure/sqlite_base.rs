@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Transaction};
+use rusqlite::Connection;
 
 use crate::{
     BookRepository, BorrowRecordRepository, LibrarianRepository, ReaderRepository, RepositoryGroup,
@@ -25,6 +25,19 @@ impl SqliteUnitOfWork {
     }
 }
 
+/// 打开一个 sqlite 数据库连接并初始化全部表，供 [`SqliteUnitOfWork`] 使用。
+pub fn new_sqlite_unit_of_work(path: &str) -> Result<SqliteUnitOfWork, SqliteBaseNewError> {
+    if path.trim().is_empty() {
+        return Err(SqliteBaseNewError::PathIsEmpty);
+    }
+    let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
+    sqlite_base_book_repo::create_book_table(&conn)?;
+    sqlite_base_reader_repo::create_reader_table(&conn)?;
+    sqlite_base_librarian_repo::create_librarian_table(&conn)?;
+    sqlite_base_borrow_record_repo::create_borrow_record_table(&conn)?;
+    Ok(SqliteUnitOfWork::new(conn))
+}
+
 impl UnitOfWork for SqliteUnitOfWork {
     fn repositories(&self) -> Box<dyn RepositoryGroup + '_> {
         Box::new(SqliteRepositoryGroup::new(&self.conn))
@@ -48,55 +61,30 @@ impl UnitOfWork for SqliteUnitOfWork {
     }
 }
 
-pub struct SqliteRepositoryGroup<'a, T>
-where
-    T: ForSqlRepo,
-{
-    tx: &'a T,
+pub struct SqliteRepositoryGroup<'a> {
+    conn: &'a Connection,
 }
 
-impl<'a, T> SqliteRepositoryGroup<'a, T>
-where
-    T: ForSqlRepo,
-{
-    pub fn new(tx: &'a T) -> Self {
-        Self { tx }
+impl<'a> SqliteRepositoryGroup<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
+        Self { conn }
     }
 }
 
-impl<T> RepositoryGroup for SqliteRepositoryGroup<'_, T>
-where
-    T: ForSqlRepo,
-{
+impl RepositoryGroup for SqliteRepositoryGroup<'_> {
     fn book(&self) -> Box<dyn BookRepository + '_> {
-        Box::new(SqliteBaseBookRepository::new(self.tx))
+        Box::new(SqliteBaseBookRepository::new(self.conn))
     }
 
     fn borrow_record(&self) -> Box<dyn BorrowRecordRepository + '_> {
-        Box::new(SqliteBaseBorrowRecordRepository::new(self.tx))
+        Box::new(SqliteBaseBorrowRecordRepository::new(self.conn))
     }
 
     fn reader(&self) -> Box<dyn ReaderRepository + '_> {
-        Box::new(SqliteBaseReaderRepository::new(self.tx))
+        Box::new(SqliteBaseReaderRepository::new(self.conn))
     }
 
     fn librarian(&self) -> Box<dyn LibrarianRepository + '_> {
-        Box::new(SqliteBaseLibrarianRepository::new(self.tx))
-    }
-}
-
-pub trait ForSqlRepo {
-    fn conn(&self) -> &Connection;
-}
-
-impl ForSqlRepo for Connection {
-    fn conn(&self) -> &Connection {
-        self
-    }
-}
-
-impl ForSqlRepo for Transaction<'_> {
-    fn conn(&self) -> &Connection {
-        self
+        Box::new(SqliteBaseLibrarianRepository::new(self.conn))
     }
 }

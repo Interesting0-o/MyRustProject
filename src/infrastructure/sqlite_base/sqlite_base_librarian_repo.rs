@@ -2,14 +2,11 @@ use rusqlite::{Connection, OptionalExtension, Row, ffi::SQLITE_CONSTRAINT_PRIMAR
 
 use crate::{
     AddLibrarianError, FindLibrarianError, Librarian, LibrarianRepository, UpdateLibrarianError,
-    infrastructure::sqlite_base::{ForSqlRepo, SqliteBaseNewError},
+    infrastructure::sqlite_base::SqliteBaseNewError,
 };
 
-pub struct SqliteBaseLibrarianRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    librarian_conn: &'a T,
+pub struct SqliteBaseLibrarianRepository<'a> {
+    librarian_conn: &'a Connection,
 }
 
 pub fn new_librarian_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
@@ -17,6 +14,11 @@ pub fn new_librarian_table(path: &str) -> Result<Connection, SqliteBaseNewError>
         return Err(SqliteBaseNewError::PathIsEmpty);
     }
     let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
+    create_librarian_table(&conn)?;
+    Ok(conn)
+}
+
+pub(crate) fn create_librarian_table(conn: &Connection) -> Result<(), SqliteBaseNewError> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS librarian (
             account TEXT PRIMARY KEY,
@@ -26,14 +28,11 @@ pub fn new_librarian_table(path: &str) -> Result<Connection, SqliteBaseNewError>
         [],
     )
     .map_err(SqliteBaseNewError::ConnectError)?;
-    Ok(conn)
+    Ok(())
 }
 
-impl<'a, T> SqliteBaseLibrarianRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    pub fn new(conn: &'a T) -> Self {
+impl<'a> SqliteBaseLibrarianRepository<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
         Self {
             librarian_conn: conn,
         }
@@ -48,13 +47,9 @@ fn read_librarian(row: &Row<'_>) -> rusqlite::Result<Librarian> {
     })
 }
 
-impl<'a, T> LibrarianRepository for SqliteBaseLibrarianRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
+impl LibrarianRepository for SqliteBaseLibrarianRepository<'_> {
     fn add(&self, librarian: Librarian) -> Result<(), AddLibrarianError> {
         self.librarian_conn
-            .conn()
             .execute(
                 "INSERT INTO librarian (account, name, hash_pwd) VALUES (?1, ?2, ?3);",
                 params![librarian.account, librarian.name, librarian.hash_pwd as i64],
@@ -73,7 +68,6 @@ where
     fn find_librarian_by_account(&self, account: &str) -> Result<Librarian, FindLibrarianError> {
         if let Some(librarian) = self
             .librarian_conn
-            .conn()
             .query_row(
                 "SELECT * FROM librarian WHERE account = ?1;",
                 params![account],
@@ -91,7 +85,6 @@ where
     fn find_librarian_by_name(&self, name: &str) -> Result<Vec<Librarian>, FindLibrarianError> {
         let mut stmt = self
             .librarian_conn
-            .conn()
             .prepare("SELECT * FROM librarian WHERE name = ?1;")
             .map_err(|e| FindLibrarianError::Backend(Box::new(e)))?;
         let rows = stmt
@@ -110,7 +103,6 @@ where
     fn update(&self, librarian: Librarian) -> Result<(), UpdateLibrarianError> {
         let row = self
             .librarian_conn
-            .conn()
             .execute(
                 "UPDATE librarian SET name=?1, hash_pwd=?2 WHERE account = ?3;",
                 params![librarian.name, librarian.hash_pwd as i64, librarian.account],

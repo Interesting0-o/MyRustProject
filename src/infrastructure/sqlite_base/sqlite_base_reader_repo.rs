@@ -2,14 +2,11 @@ use rusqlite::{Connection, OptionalExtension, ffi::SQLITE_CONSTRAINT_PRIMARYKEY,
 
 use crate::{
     AddReaderError, FindReaderError, Reader, ReaderRepository, UpdateReaderError,
-    infrastructure::sqlite_base::{ForSqlRepo, SqliteBaseNewError},
+    infrastructure::sqlite_base::SqliteBaseNewError,
 };
 
-pub struct SqliteBaseReaderRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    reader_conn: &'a T,
+pub struct SqliteBaseReaderRepository<'a> {
+    reader_conn: &'a Connection,
 }
 
 pub fn new_reader_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
@@ -18,7 +15,11 @@ pub fn new_reader_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
     }
 
     let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
+    create_reader_table(&conn)?;
+    Ok(conn)
+}
 
+pub(crate) fn create_reader_table(conn: &Connection) -> Result<(), SqliteBaseNewError> {
     conn.execute(
         "
         CREATE TABLE IF NOT EXISTS reader (
@@ -29,25 +30,18 @@ pub fn new_reader_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
         [],
     )
     .map_err(SqliteBaseNewError::ConnectError)?;
-    Ok(conn)
+    Ok(())
 }
 
-impl<'a, T> SqliteBaseReaderRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    pub fn new(conn: &'a T) -> Self {
+impl<'a> SqliteBaseReaderRepository<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
         Self { reader_conn: conn }
     }
 }
 
-impl<'a, T> ReaderRepository for SqliteBaseReaderRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
+impl ReaderRepository for SqliteBaseReaderRepository<'_> {
     fn add(&self, reader: Reader) -> Result<(), AddReaderError> {
         self.reader_conn
-            .conn()
             .execute(
                 "INSERT INTO reader(account,name,hash_pwd) VALUES (?1, ?2, ?3);",
                 params![reader.account, reader.name, reader.hash_pwd as i64],
@@ -66,7 +60,6 @@ where
     fn update(&self, reader: Reader) -> Result<(), UpdateReaderError> {
         let row = self
             .reader_conn
-            .conn()
             .execute(
                 "UPDATE reader SET name=?1, hash_pwd = ?2 WHERE account == ?3 ;",
                 params![reader.name, reader.hash_pwd as i64, reader.account],
@@ -82,7 +75,6 @@ where
     fn find_reader_by_name(&self, name: &str) -> Result<Vec<Reader>, FindReaderError> {
         let mut stmt = self
             .reader_conn
-            .conn()
             .prepare("SELECT * FROM reader WHERE name=?1")
             .map_err(|e| FindReaderError::Backend(Box::new(e)))?;
 
@@ -107,7 +99,6 @@ where
     fn find_reader_by_account(&self, account: &str) -> Result<Reader, FindReaderError> {
         if let Some(reader) = self
             .reader_conn
-            .conn()
             .query_row(
                 "SELECT * FROM reader WHERE account = ?1;",
                 params![account],

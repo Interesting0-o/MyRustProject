@@ -2,21 +2,15 @@ use rusqlite::{Connection, OptionalExtension, ffi::SQLITE_CONSTRAINT_PRIMARYKEY,
 
 use crate::{
     AddBookError, Book, BookRepository, FindBookError, UpdateBookError,
-    infrastructure::sqlite_base::{ForSqlRepo, SqliteBaseNewError},
+    infrastructure::sqlite_base::SqliteBaseNewError,
 };
 
-pub struct SqliteBaseBookRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    book_conn: &'a T,
+pub struct SqliteBaseBookRepository<'a> {
+    book_conn: &'a Connection,
 }
 
-impl<'a, T> SqliteBaseBookRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
-    pub fn new(conn: &'a T) -> Self {
+impl<'a> SqliteBaseBookRepository<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
         Self { book_conn: conn }
     }
 }
@@ -26,6 +20,11 @@ pub fn new_book_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
         return Err(SqliteBaseNewError::PathIsEmpty);
     }
     let conn = Connection::open(path).map_err(SqliteBaseNewError::ConnectError)?;
+    create_book_table(&conn)?;
+    Ok(conn)
+}
+
+pub(crate) fn create_book_table(conn: &Connection) -> Result<(), SqliteBaseNewError> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS book (
                     bid  TEXT  PRIMARY KEY,
@@ -37,16 +36,12 @@ pub fn new_book_table(path: &str) -> Result<Connection, SqliteBaseNewError> {
         [],
     )
     .map_err(SqliteBaseNewError::ConnectError)?;
-    Ok(conn)
+    Ok(())
 }
 
-impl<'a, T> BookRepository for SqliteBaseBookRepository<'a, T>
-where
-    T: ForSqlRepo,
-{
+impl BookRepository for SqliteBaseBookRepository<'_> {
     fn add(&self, book: Book) -> Result<(), AddBookError> {
         self.book_conn
-            .conn()
             .execute(
                 "INSERT INTO book (bid,name,author,price,num) VALUES (?1,?2,?3,?4,?5);",
                 params![book.bid, book.name, book.author, book.price, book.num],
@@ -66,7 +61,6 @@ where
     fn update(&self, book: Book) -> Result<(), UpdateBookError> {
         let row = self
             .book_conn
-            .conn()
             .execute(
                 "UPDATE book SET author=?1 , name=?2 , num=?3 ,price=?4 where bid = ?5 ;",
                 params![book.author, book.name, book.num, book.price, book.bid],
@@ -81,7 +75,6 @@ where
     fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError> {
         if let Some(book) = self
             .book_conn
-            .conn()
             .query_row("SELECT * FROM book WHERE bid = ?1;", params![bid], |row| {
                 Ok(Book {
                     bid: row.get("bid")?,
@@ -103,7 +96,6 @@ where
     fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, FindBookError> {
         let mut stmt = self
             .book_conn
-            .conn()
             .prepare("SELECT * FROM book WHERE name = ?1;")
             .map_err(|e| FindBookError::Backend(Box::new(e)))?;
         let rows = stmt
