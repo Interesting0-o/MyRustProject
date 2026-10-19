@@ -14,11 +14,11 @@
 //! 即可，不必关心它来自哪个子模块；子模块本身仍是公开的，需要精确路径时仍可深入引用。
 
 pub mod adapter;
+pub mod api;
 pub mod infrastructure;
 pub mod schema;
 pub mod service;
 pub mod utils;
-
 // ---- 领域类型 ----
 pub use crate::schema::{Book, BorrowRecord, Librarian, Reader};
 
