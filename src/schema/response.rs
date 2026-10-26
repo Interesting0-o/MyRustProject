@@ -18,3 +18,9 @@ pub struct BorrowBookResponse {
     pub success: bool,
     pub messages: String,
 }
+
+#[derive(Serialize)]
+pub struct ReturnBookResponse {
+    pub success: bool,
+    pub messages: String,
+}

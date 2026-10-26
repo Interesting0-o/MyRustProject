@@ -18,3 +18,9 @@ pub struct BorrowBookRequest {
     pub bid: String,
     pub account: String,
 }
+
+#[derive(Deserialize)]
+pub struct ReturnBookRequest {
+    pub bid: String,
+    pub account: String,
+}
