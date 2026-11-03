@@ -2,9 +2,14 @@
 //!
 //! service 只依赖这里的 trait，不关心底层是 sqlite、文件还是内存。
 
+use std::{future::Future, pin::Pin};
+
 use super::{
-    BackendError, book_repo::BookRepository, borrow_record_repo::BorrowRecordRepository,
-    librarian_repo::LibrarianRepository, reader_repo::ReaderRepository,
+    BackendError,
+    book_repo::{AsyncBookRepository, BookRepository},
+    borrow_record_repo::{AsyncBorrowRecordRepository, BorrowRecordRepository},
+    librarian_repo::{AsyncLibrarianRepository, LibrarianRepository},
+    reader_repo::{AsyncReaderRepository, ReaderRepository},
 };
 
 /// 一次事务内可访问的仓储集合。
@@ -20,6 +25,23 @@ pub trait RepositoryGroup {
 
     /// 管理员仓储。
     fn librarian(&self) -> Box<dyn LibrarianRepository + '_>;
+}
+
+/// 异步仓储集合，供 sqlx 等异步后端实现。
+///
+/// 与 [`RepositoryGroup`] 一一对应，区别是返回异步仓储契约。
+pub trait AsyncRepositoryGroup {
+    /// 图书仓储。
+    fn book(&self) -> Box<dyn AsyncBookRepository + '_>;
+
+    /// 借阅记录仓储。
+    fn borrow_record(&self) -> Box<dyn AsyncBorrowRecordRepository + '_>;
+
+    /// 读者仓储。
+    fn reader(&self) -> Box<dyn AsyncReaderRepository + '_>;
+
+    /// 管理员仓储。
+    fn librarian(&self) -> Box<dyn AsyncLibrarianRepository + '_>;
 }
 
 /// 事务失败的原因。
@@ -41,4 +63,21 @@ pub trait UnitOfWork {
         &mut self,
         f: impl FnOnce(&dyn RepositoryGroup) -> Result<T, E>,
     ) -> Result<T, UnitOfWorkError<E>>;
+}
+
+/// 异步事务边界，与 [`UnitOfWork`] 对应，供 sqlx 等异步后端实现。
+#[async_trait::async_trait]
+pub trait AsyncUnitOfWork: Send {
+    /// 获取只读仓储集合，适用于登录、注册、查询等自动提交场景。
+    fn repositories(&self) -> Box<dyn AsyncRepositoryGroup + '_>;
+
+    /// 在一个事务中执行 `f`。
+    async fn transaction<T, E, F>(&mut self, f: F) -> Result<T, UnitOfWorkError<E>>
+    where
+        T: Send,
+        E: Send,
+        F: for<'a> FnOnce(
+                &'a dyn AsyncRepositoryGroup,
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>
+            + Send;
 }

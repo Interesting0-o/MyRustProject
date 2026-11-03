@@ -70,3 +70,31 @@ pub trait ReaderRepository {
     /// 仓储访问失败时返回 [`UpdateReaderError::Backend`]。
     fn update(&self, reader: Reader) -> Result<(), UpdateReaderError>;
 }
+
+/// 读者仓储的异步契约，供 sqlx 等异步后端实现。
+///
+/// 语义、错误类型与唯一性约束都与同步版 [`ReaderRepository`] 完全一致，
+/// 区别仅在于方法是 `async`，实现里可以 `await` 数据库 IO。
+/// 两个契约暂时并存，调用方按后端能力选择；迁移完成后可移除同步版本。
+#[async_trait::async_trait]
+pub trait AsyncReaderRepository: Send + Sync {
+    /// 新增一名读者。
+    ///
+    /// # 错误
+    ///
+    /// 当 `reader.account` 已存在时返回 [`AddReaderError::AccountAlreadyExists`]。
+    async fn add(&self, reader: Reader) -> Result<(), AddReaderError>;
+
+    /// 按账号 `account` 精确查找，不存在时返回 [`FindReaderError::NoResult`]。
+    async fn find_reader_by_account(&self, account: &str) -> Result<Reader, FindReaderError>;
+
+    /// 按姓名查找，返回所有同名读者；没有匹配时返回 [`FindReaderError::NoResult`]。
+    async fn find_reader_by_name(&self, name: &str) -> Result<Vec<Reader>, FindReaderError>;
+
+    /// 更新读者信息，以 `reader.account` 作为定位依据。
+    ///
+    /// # 错误
+    ///
+    /// 当 `account` 不存在时返回 [`UpdateReaderError::NonExistedAccount`]。
+    async fn update(&self, reader: Reader) -> Result<(), UpdateReaderError>;
+}
