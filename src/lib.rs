@@ -40,6 +40,7 @@ pub use crate::service::{
     login::{LoginError, librarian_login, reader_login},
     return_book::{ReturnBookError, return_book},
     sign_up::{SignUpRes, librarian_sign_up, reader_sign_up},
+    update_reader::{UpdateReaderProfileError, update_reader},
 };
 
 // ---- 仓储实现：仅供组装根（二进制 crate）挑选具体仓储 ----

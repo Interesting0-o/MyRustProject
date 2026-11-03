@@ -1,5 +1,7 @@
 use axum::Router;
-use book_manager::api::{AppState, borrow_book, login, return_book, sign_up};
+use book_manager::api::{
+    AppState, borrow_book, find_book, login, return_book, sign_up, update_book, update_reader,
+};
 
 #[tokio::main]
 async fn main() {
@@ -8,6 +10,9 @@ async fn main() {
         .merge(sign_up::router())
         .merge(borrow_book::router())
         .merge(return_book::router())
+        .merge(find_book::router())
+        .merge(update_book::router())
+        .merge(update_reader::router())
         .with_state(AppState {
             db_path: "resource/repo.db".to_string(),
         });
