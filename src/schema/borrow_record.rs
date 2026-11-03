@@ -4,8 +4,9 @@
 /// - `bid`：被借图书的编号
 /// - `account`：借阅者的账号
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, FromRow)]
 pub struct BorrowRecord {
     pub br_id: String,
     pub bid: String,

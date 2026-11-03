@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, FromRow)]
 pub struct Book {
     pub author: String,
     pub bid: String,

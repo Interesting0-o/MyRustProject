@@ -78,11 +78,4 @@ pub use crate::infrastructure::json_base::{
     json_base_reader_repo::JSONBaseReaderRepository,
 };
 
-// sqlite 实现：数据落盘到 resource/repo.db（四个仓储共享同一个库文件）
-pub use crate::infrastructure::sqlite_base::{
-    SqliteBaseNewError, SqliteUnitOfWork, new_sqlite_unit_of_work,
-    sqlite_base_book_repo::SqliteBaseBookRepository,
-    sqlite_base_borrow_record_repo::SqliteBaseBorrowRecordRepository,
-    sqlite_base_librarian_repo::SqliteBaseLibrarianRepository,
-    sqlite_base_reader_repo::SqliteBaseReaderRepository,
-};
+// sqlx 实现，mariadb实现数据库的连接;
