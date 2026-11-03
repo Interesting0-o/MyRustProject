@@ -2,11 +2,11 @@ use sqlx::{MySqlPool, mysql::MySqlDatabaseError};
 
 use crate::{AddBookError, AsyncBookRepository, Book, FindBookError, UpdateBookError};
 
-pub struct MySqlBaseBookREpository<'a> {
+pub struct MySqlBaseBookRepository<'a> {
     pool: &'a MySqlPool,
 }
 
-impl<'a> MySqlBaseBookREpository<'a> {
+impl<'a> MySqlBaseBookRepository<'a> {
     pub fn new(pool: &'a MySqlPool) -> Self {
         Self { pool }
     }
@@ -30,7 +30,7 @@ pub async fn new_book_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
 }
 
 #[async_trait::async_trait]
-impl<'a> AsyncBookRepository for MySqlBaseBookREpository<'a> {
+impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
     async fn add(&self, book: Book) -> Result<(), AddBookError> {
         let res = sqlx::query("INSERT INTO books (bid,name,author,price,num) VALUES (?,?,?,?,?)")
             .bind(&book.bid)

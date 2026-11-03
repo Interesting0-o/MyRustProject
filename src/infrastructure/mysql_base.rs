@@ -1,18 +1,21 @@
 pub mod mysql_base_book_repo;
+pub mod mysql_base_reader_repo;
 use std::{future::Future, pin::Pin};
 
 use crate::{
     AsyncBookRepository, AsyncBorrowRecordRepository, AsyncLibrarianRepository,
     AsyncReaderRepository, AsyncRepositoryGroup, AsyncUnitOfWork, UnitOfWorkError,
 };
-use mysql_base_book_repo::MySqlBaseBookREpository;
+use mysql_base_book_repo::MySqlBaseBookRepository;
+use mysql_base_reader_repo::MySqlBaseReaderRepository;
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 
 pub struct MySqlUnitOfWork {
     pool: MySqlPool,
 }
 
-enum MySqlUNewError {
+#[derive(Debug)]
+pub enum MySqlUNewError {
     URLIsEmpty,
     ConnectError,
 }
@@ -55,6 +58,17 @@ async fn new_mysql_uow(url: &str) -> Result<MySqlUnitOfWork, MySqlUNewError> {
     Ok(MySqlUnitOfWork { pool })
 }
 
+/// 创建 MySQL 工作单元并交给 `f` 使用。
+///
+/// 连接串为空或连接失败时返回 [`MySqlUNewError`]。
+pub async fn with_mysql_uow<T, F>(url: &str, f: F) -> Result<T, MySqlUNewError>
+where
+    F: AsyncFnOnce(&mut MySqlUnitOfWork) -> T,
+{
+    let mut uow = new_mysql_uow(url).await?;
+    Ok(f(&mut uow).await)
+}
+
 // 仓库群
 struct MySqlRepositoryGroup<'a> {
     pool: &'a MySqlPool,
@@ -62,10 +76,10 @@ struct MySqlRepositoryGroup<'a> {
 
 impl<'a> AsyncRepositoryGroup for MySqlRepositoryGroup<'a> {
     fn book(&self) -> Box<dyn AsyncBookRepository + '_> {
-        Box::new(MySqlBaseBookREpository::new(self.pool))
+        Box::new(MySqlBaseBookRepository::new(self.pool))
     }
     fn reader(&self) -> Box<dyn AsyncReaderRepository + '_> {
-        todo!();
+        Box::new(MySqlBaseReaderRepository::new(self.pool))
     }
 
     fn librarian(&self) -> Box<dyn AsyncLibrarianRepository + '_> {
