@@ -6,7 +6,9 @@ pub mod sign_up;
 pub mod update_book;
 pub mod update_reader;
 
+use sqlx::MySqlPool;
+
 #[derive(Clone)]
 pub struct AppState {
-    pub db_path: String,
+    pub pool: MySqlPool,
 }
