@@ -1,20 +1,23 @@
-use sqlx::{MySqlPool, mysql::MySqlDatabaseError};
+use sqlx::{
+    MySqlPool,
+    mysql::{MySqlConnection, MySqlDatabaseError},
+};
 
-use crate::{AddBookError, AsyncBookRepository, Book, FindBookError, UpdateBookError};
+use crate::{
+    AddBookError, AsyncBookRepository, Book, FindBookError, UpdateBookError,
+    infrastructure::mysql_base::CreateTableError,
+};
 
 pub struct MySqlBaseBookRepository<'a> {
-    pool: &'a MySqlPool,
+    conn: &'a mut MySqlConnection,
 }
 
 impl<'a> MySqlBaseBookRepository<'a> {
-    pub fn new(pool: &'a MySqlPool) -> Self {
-        Self { pool }
+    pub fn new(conn: &'a mut MySqlConnection) -> Self {
+        Self { conn }
     }
 }
 
-enum CreateTableError {
-    ConnectError,
-}
 pub async fn new_book_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
     sqlx::query(r#"
         CREATE TABLE IF NOT EXISTS books (
@@ -31,14 +34,14 @@ pub async fn new_book_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
 
 #[async_trait::async_trait]
 impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
-    async fn add(&self, book: Book) -> Result<(), AddBookError> {
+    async fn add(&mut self, book: Book) -> Result<(), AddBookError> {
         let res = sqlx::query("INSERT INTO books (bid,name,author,price,num) VALUES (?,?,?,?,?)")
             .bind(&book.bid)
             .bind(&book.name)
             .bind(&book.author)
             .bind(&book.price)
             .bind(&book.num)
-            .execute(self.pool)
+            .execute(&mut *self.conn)
             .await
             .map_err(|e| {
                 if let sqlx::Error::Database(db_err) = &e {
@@ -60,7 +63,7 @@ impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
         }
     }
 
-    async fn update(&self, book: Book) -> Result<(), UpdateBookError> {
+    async fn update(&mut self, book: Book) -> Result<(), UpdateBookError> {
         let res =
             sqlx::query("UPDATE books SET name = ?, author = ?, price = ?, num = ? WHERE bid = ?")
                 .bind(&book.name)
@@ -68,7 +71,7 @@ impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
                 .bind(&book.price)
                 .bind(&book.num)
                 .bind(&book.bid)
-                .execute(self.pool)
+                .execute(&mut *self.conn)
                 .await
                 .map_err(|e| UpdateBookError::Backend(Box::new(e)))?;
 
@@ -80,12 +83,12 @@ impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
             )))),
         }
     }
-    async fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError> {
+    async fn find_book_by_bid(&mut self, bid: &str) -> Result<Book, FindBookError> {
         if let Some(book) = sqlx::query_as::<_, Book>(
             "SELECT author,bid ,name ,price,num FROM books WHERE bid = ? ",
         )
         .bind(bid)
-        .fetch_optional(self.pool)
+        .fetch_optional(&mut *self.conn)
         .await
         .map_err(|e| FindBookError::Backend(Box::new(e)))?
         {
@@ -95,12 +98,12 @@ impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
         }
     }
 
-    async fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, FindBookError> {
+    async fn find_book_by_name(&mut self, name: &str) -> Result<Vec<Book>, FindBookError> {
         let books = sqlx::query_as::<_, Book>(
             "SELECT author, bid, name, price, num FROM books WHERE name = ?",
         )
         .bind(name)
-        .fetch_all(self.pool)
+        .fetch_all(&mut *self.conn)
         .await
         .map_err(|e| FindBookError::Backend(Box::new(e)))?;
 

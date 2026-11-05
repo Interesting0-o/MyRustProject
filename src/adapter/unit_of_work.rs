@@ -30,18 +30,18 @@ pub trait RepositoryGroup {
 /// 异步仓储集合，供 sqlx 等异步后端实现。
 ///
 /// 与 [`RepositoryGroup`] 一一对应，区别是返回异步仓储契约。
-pub trait AsyncRepositoryGroup {
+pub trait AsyncRepositoryGroup: Send {
     /// 图书仓储。
-    fn book(&self) -> Box<dyn AsyncBookRepository + '_>;
+    fn book(&mut self) -> Box<dyn AsyncBookRepository + '_>;
 
     /// 借阅记录仓储。
-    fn borrow_record(&self) -> Box<dyn AsyncBorrowRecordRepository + '_>;
+    fn borrow_record(&mut self) -> Box<dyn AsyncBorrowRecordRepository + '_>;
 
     /// 读者仓储。
-    fn reader(&self) -> Box<dyn AsyncReaderRepository + '_>;
+    fn reader(&mut self) -> Box<dyn AsyncReaderRepository + '_>;
 
     /// 管理员仓储。
-    fn librarian(&self) -> Box<dyn AsyncLibrarianRepository + '_>;
+    fn librarian(&mut self) -> Box<dyn AsyncLibrarianRepository + '_>;
 }
 
 /// 事务失败的原因。
@@ -69,7 +69,7 @@ pub trait UnitOfWork {
 #[async_trait::async_trait]
 pub trait AsyncUnitOfWork: Send {
     /// 获取只读仓储集合，适用于登录、注册、查询等自动提交场景。
-    fn repositories(&self) -> Box<dyn AsyncRepositoryGroup + '_>;
+    async fn repositories(&mut self) -> Result<Box<dyn AsyncRepositoryGroup + '_>, BackendError>;
 
     /// 在一个事务中执行 `f`。
     async fn transaction<T, E, F>(&mut self, f: F) -> Result<T, UnitOfWorkError<E>>
@@ -77,7 +77,7 @@ pub trait AsyncUnitOfWork: Send {
         T: Send,
         E: Send,
         F: for<'a> FnOnce(
-                &'a dyn AsyncRepositoryGroup,
+                &'a mut dyn AsyncRepositoryGroup,
             ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>
             + Send;
 }

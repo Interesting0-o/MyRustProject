@@ -77,23 +77,23 @@ pub trait LibrarianRepository {
 /// 区别仅在于方法是 `async`，实现里可以 `await` 数据库 IO。
 /// 两个契约暂时并存，调用方按后端能力选择；迁移完成后可移除同步版本。
 #[async_trait::async_trait]
-pub trait AsyncLibrarianRepository: Send + Sync {
+pub trait AsyncLibrarianRepository: Send {
     /// 新增一名管理员。
     ///
     /// # 错误
     ///
     /// 当 `librarian.account` 已存在时返回 [`AddLibrarianError::AccountAlreadyExists`]。
-    async fn add(&self, librarian: Librarian) -> Result<(), AddLibrarianError>;
+    async fn add(&mut self, librarian: Librarian) -> Result<(), AddLibrarianError>;
 
     /// 按账号 `account` 精确查找，不存在时返回 [`FindLibrarianError::NoResult`]。
     async fn find_librarian_by_account(
-        &self,
+        &mut self,
         account: &str,
     ) -> Result<Librarian, FindLibrarianError>;
 
     /// 按姓名查找，返回所有同名管理员；没有匹配时返回 [`FindLibrarianError::NoResult`]。
     async fn find_librarian_by_name(
-        &self,
+        &mut self,
         name: &str,
     ) -> Result<Vec<Librarian>, FindLibrarianError>;
 
@@ -102,5 +102,5 @@ pub trait AsyncLibrarianRepository: Send + Sync {
     /// # 错误
     ///
     /// 当 `account` 不存在时返回 [`UpdateLibrarianError::NonExistedAccount`]。
-    async fn update(&self, librarian: Librarian) -> Result<(), UpdateLibrarianError>;
+    async fn update(&mut self, librarian: Librarian) -> Result<(), UpdateLibrarianError>;
 }

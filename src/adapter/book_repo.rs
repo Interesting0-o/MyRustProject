@@ -84,20 +84,20 @@ pub trait BookRepository {
 /// 区别仅在于方法是 `async`，实现里可以 `await` 数据库 IO。
 /// 两个契约暂时并存，调用方按后端能力选择；迁移完成后可移除同步版本。
 #[async_trait::async_trait]
-pub trait AsyncBookRepository: Send + Sync {
+pub trait AsyncBookRepository: Send {
     /// 新增一本图书。
     ///
     /// # 错误
     ///
     /// 当 `book.bid` 已存在时返回 [`AddBookError::BIDAlreadyExists`]；
     /// 仓储访问失败时返回 [`AddBookError::Backend`]。
-    async fn add(&self, book: Book) -> Result<(), AddBookError>;
+    async fn add(&mut self, book: Book) -> Result<(), AddBookError>;
 
     /// 按书名查找，返回所有同名图书；没有匹配时返回 [`FindBookError::NoResult`]。
-    async fn find_book_by_name(&self, name: &str) -> Result<Vec<Book>, FindBookError>;
+    async fn find_book_by_name(&mut self, name: &str) -> Result<Vec<Book>, FindBookError>;
 
     /// 按编号 `bid` 精确查找，不存在时返回 [`FindBookError::NoResult`]。
-    async fn find_book_by_bid(&self, bid: &str) -> Result<Book, FindBookError>;
+    async fn find_book_by_bid(&mut self, bid: &str) -> Result<Book, FindBookError>;
 
     /// 更新图书信息，以 `book.bid` 作为定位依据。
     ///
@@ -105,5 +105,5 @@ pub trait AsyncBookRepository: Send + Sync {
     ///
     /// 当 `bid` 不存在时返回 [`UpdateBookError::NonExistedBID`]；
     /// 仓储访问失败时返回 [`UpdateBookError::Backend`]。
-    async fn update(&self, book: Book) -> Result<(), UpdateBookError>;
+    async fn update(&mut self, book: Book) -> Result<(), UpdateBookError>;
 }

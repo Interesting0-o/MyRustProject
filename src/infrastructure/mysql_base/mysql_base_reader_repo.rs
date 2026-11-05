@@ -1,14 +1,17 @@
-use sqlx::{MySqlPool, mysql::MySqlDatabaseError};
+use sqlx::{
+    MySqlPool,
+    mysql::{MySqlConnection, MySqlDatabaseError},
+};
 
 use crate::{AddReaderError, AsyncReaderRepository, FindReaderError, Reader, UpdateReaderError};
 
 pub struct MySqlBaseReaderRepository<'a> {
-    pool: &'a MySqlPool,
+    conn: &'a mut MySqlConnection,
 }
 
 impl<'a> MySqlBaseReaderRepository<'a> {
-    pub fn new(pool: &'a MySqlPool) -> Self {
-        Self { pool }
+    pub fn new(conn: &'a mut MySqlConnection) -> Self {
+        Self { conn }
     }
 }
 
@@ -34,12 +37,12 @@ pub async fn new_reader_table(pool: &MySqlPool) -> Result<(), CreateTableError> 
 
 #[async_trait::async_trait]
 impl<'a> AsyncReaderRepository for MySqlBaseReaderRepository<'a> {
-    async fn add(&self, reader: Reader) -> Result<(), AddReaderError> {
+    async fn add(&mut self, reader: Reader) -> Result<(), AddReaderError> {
         let res = sqlx::query("INSERT INTO readers (account, name, hash_pwd) VALUES (?, ?, ?)")
             .bind(&reader.account)
             .bind(&reader.name)
             .bind(reader.hash_pwd)
-            .execute(self.pool)
+            .execute(&mut *self.conn)
             .await
             .map_err(|e| {
                 if let sqlx::Error::Database(db_err) = &e {
@@ -61,21 +64,21 @@ impl<'a> AsyncReaderRepository for MySqlBaseReaderRepository<'a> {
         }
     }
 
-    async fn find_reader_by_account(&self, account: &str) -> Result<Reader, FindReaderError> {
+    async fn find_reader_by_account(&mut self, account: &str) -> Result<Reader, FindReaderError> {
         sqlx::query_as::<_, Reader>("SELECT account, name, hash_pwd FROM readers WHERE account = ?")
             .bind(account)
-            .fetch_optional(self.pool)
+            .fetch_optional(&mut *self.conn)
             .await
             .map_err(|e| FindReaderError::Backend(Box::new(e)))?
             .ok_or(FindReaderError::NoResult)
     }
 
-    async fn find_reader_by_name(&self, name: &str) -> Result<Vec<Reader>, FindReaderError> {
+    async fn find_reader_by_name(&mut self, name: &str) -> Result<Vec<Reader>, FindReaderError> {
         let readers = sqlx::query_as::<_, Reader>(
             "SELECT account, name, hash_pwd FROM readers WHERE name = ?",
         )
         .bind(name)
-        .fetch_all(self.pool)
+        .fetch_all(&mut *self.conn)
         .await
         .map_err(|e| FindReaderError::Backend(Box::new(e)))?;
 
@@ -86,12 +89,12 @@ impl<'a> AsyncReaderRepository for MySqlBaseReaderRepository<'a> {
         }
     }
 
-    async fn update(&self, reader: Reader) -> Result<(), UpdateReaderError> {
+    async fn update(&mut self, reader: Reader) -> Result<(), UpdateReaderError> {
         let res = sqlx::query("UPDATE readers SET name = ?, hash_pwd = ? WHERE account = ?")
             .bind(&reader.name)
             .bind(reader.hash_pwd)
             .bind(&reader.account)
-            .execute(self.pool)
+            .execute(&mut *self.conn)
             .await
             .map_err(|e| UpdateReaderError::Backend(Box::new(e)))?;
 
