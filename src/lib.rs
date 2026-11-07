@@ -49,6 +49,7 @@ pub use crate::service::{
     login::{LoginError, librarian_login, reader_login},
     return_book::{ReturnBookError, return_book},
     sign_up::{SignUpRes, librarian_sign_up, reader_sign_up},
+    update_book::{UpdateBookProfileError, update_book},
     update_reader::{UpdateReaderProfileError, update_reader},
 };
 
