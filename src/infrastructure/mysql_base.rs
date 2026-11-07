@@ -27,6 +27,7 @@ pub enum MySqlUNewError {
     ConnectError,
 }
 
+// 工作单元模式
 pub struct MySqlUnitOfWork {
     pool: MySqlPool,
 }
