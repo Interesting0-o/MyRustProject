@@ -38,6 +38,7 @@ pub struct FindBookByNameRequest {
 #[derive(Deserialize)]
 pub struct UpdateBookRequest {
     pub name: Option<String>,
+    pub author: Option<String>,
     pub bid: String,
     pub price: Option<i64>,
     pub num: Option<u32>,

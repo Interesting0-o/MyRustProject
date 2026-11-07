@@ -2,9 +2,10 @@ use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::{
     LoginError,
-    api::{AppState, with_sqlite_uow},
-    librarian_login, reader_login,
+    api::AppState,
+    async_librarian_login, async_reader_login,
     schema::{request::LoginRequest, response::LoginResponse},
+    with_mysql_uow,
 };
 
 type LoginApiResponse = (StatusCode, Json<LoginResponse>);
@@ -55,22 +56,28 @@ pub async fn reader_login_api(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> LoginApiResponse {
-    with_sqlite_uow(state, |uow| {
-        handle_result(reader_login(uow, &req.account, &req.password).map(|r| (r.account, r.name)))
+    with_mysql_uow(&state.pool, async |uow| {
+        handle_result(
+            async_reader_login(uow, &req.account, &req.password)
+                .await
+                .map(|r| (r.account, r.name)),
+        )
     })
-    .unwrap_or_else(server_error)
+    .await
 }
 
 pub async fn librarian_login_api(
     State(state): State<AppState>,
     Json(req): Json<LoginRequest>,
 ) -> LoginApiResponse {
-    with_sqlite_uow(state, |uow| {
+    with_mysql_uow(&state.pool, async |uow| {
         handle_result(
-            librarian_login(uow, &req.account, &req.password).map(|l| (l.account, l.name)),
+            async_librarian_login(uow, &req.account, &req.password)
+                .await
+                .map(|l| (l.account, l.name)),
         )
     })
-    .unwrap_or_else(server_error)
+    .await
 }
 
 pub fn router() -> Router<AppState> {

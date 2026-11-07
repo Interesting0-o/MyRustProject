@@ -2,9 +2,10 @@ use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::{
     BorrowBookError,
-    api::{AppState, with_sqlite_uow},
-    borrow_book,
+    api::AppState,
+    async_borrow_book,
     schema::{request::BorrowBookRequest, response::BorrowBookResponse},
+    with_mysql_uow,
 };
 
 type BorrowBookApiResponse = (StatusCode, Json<BorrowBookResponse>);
@@ -36,10 +37,10 @@ pub async fn borrow_book_api(
     State(state): State<AppState>,
     Json(req): Json<BorrowBookRequest>,
 ) -> BorrowBookApiResponse {
-    with_sqlite_uow(state, |uow| {
-        handle_result(borrow_book(uow, &req.account, &req.bid))
+    with_mysql_uow(&state.pool, async |uow| {
+        handle_result(async_borrow_book(uow, &req.account, &req.bid).await)
     })
-    .unwrap_or_else(server_error)
+    .await
 }
 
 pub fn router() -> Router<AppState> {

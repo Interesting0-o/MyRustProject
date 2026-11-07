@@ -2,9 +2,10 @@ use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::{
     UpdateReaderProfileError,
-    api::{AppState, with_sqlite_uow},
+    api::AppState,
+    async_update_reader,
     schema::{request::UpdateReaderRequest, response::UpdateReaderResponse},
-    update_reader,
+    with_mysql_uow,
 };
 
 type UpdateReaderApiResponse = (StatusCode, Json<UpdateReaderResponse>);
@@ -71,16 +72,19 @@ pub async fn update_reader_api(
         return response(false, "参数不匹配", StatusCode::BAD_REQUEST);
     }
 
-    with_sqlite_uow(state, |uow| {
-        handle_result(update_reader(
-            uow,
-            account,
-            name.as_deref(),
-            current_password,
-            new_password,
-        ))
+    with_mysql_uow(&state.pool, async |uow| {
+        handle_result(
+            async_update_reader(
+                uow,
+                account,
+                name.as_deref(),
+                current_password,
+                new_password,
+            )
+            .await,
+        )
     })
-    .unwrap_or_else(server_error)
+    .await
 }
 
 pub fn router() -> Router<AppState> {

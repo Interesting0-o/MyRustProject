@@ -2,9 +2,10 @@ use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::{
     ReturnBookError,
-    api::{AppState, with_sqlite_uow},
-    return_book,
+    api::AppState,
+    async_return_book,
     schema::{request::ReturnBookRequest, response::ReturnBookResponse},
+    with_mysql_uow,
 };
 
 type ReturnBookApiResponse = (StatusCode, Json<ReturnBookResponse>);
@@ -40,10 +41,10 @@ pub async fn return_book_api(
     State(state): State<AppState>,
     Json(req): Json<ReturnBookRequest>,
 ) -> ReturnBookApiResponse {
-    with_sqlite_uow(state, |uow| {
-        handle_result(return_book(uow, &req.account, &req.bid))
+    with_mysql_uow(&state.pool, async |uow| {
+        handle_result(async_return_book(uow, &req.account, &req.bid).await)
     })
-    .unwrap_or_else(server_error)
+    .await
 }
 
 pub fn router() -> Router<AppState> {
