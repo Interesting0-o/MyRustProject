@@ -3,9 +3,7 @@
 //! 这里只定义 trait，描述领域对象需要哪些持久化操作，不关心具体存储方式。
 //! 具体实现位于 [`crate::infrastructure`]。
 //!
-//! 每类仓储都提供两套契约：同步版（`XxxRepository`）和异步版
-//! （`AsyncXxxRepository`）。两者语义完全一致，异步版供 sqlx 等异步后端实现；
-//! 迁移期间并存，调用方按后端能力选择。
+//! 仓储契约全部为异步版本（`AsyncXxxRepository`），供 sqlx 等异步后端实现。
 
 pub mod book_repo;
 pub mod borrow_record_repo;

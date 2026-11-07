@@ -31,51 +31,7 @@ pub enum FindReaderError {
     Backend(BackendError),
 }
 
-/// 读者仓储：定义 [`Reader`] 的读写操作。
-///
-/// 所有实现都应保证 `account` 在仓储内唯一。
-///
-/// 构造不属于本契约：各实现的构造方式不同，由实现自行提供。
-pub trait ReaderRepository {
-    /// 新增一名读者。
-    ///
-    /// # 错误
-    ///
-    /// 当 `reader.account` 已存在时返回 [`AddReaderError::AccountAlreadyExists`]；
-    /// 仓储访问失败时返回 [`AddReaderError::Backend`]。
-    fn add(&self, reader: Reader) -> Result<(), AddReaderError>;
-
-    /// 按账号 `account` 精确查找，不存在时返回 [`FindReaderError::NoResult`]。
-    ///
-    /// # 错误
-    ///
-    /// 仓储访问失败时返回 [`FindReaderError::Backend`]。
-    fn find_reader_by_account(&self, account: &str) -> Result<Reader, FindReaderError>;
-
-    /// 按姓名查找，返回所有同名读者；没有匹配时返回 [`FindReaderError::NoResult`]。
-    ///
-    /// # 错误
-    ///
-    /// 仓储访问失败时返回 [`FindReaderError::Backend`]。
-    fn find_reader_by_name(&self, name: &str) -> Result<Vec<Reader>, FindReaderError>;
-
-    /// 更新读者信息，以 `reader.account` 作为定位依据。
-    ///
-    /// `account` 是主键，不会被这次更新改动：传入的 `account` 只用于定位，
-    /// 需与原记录保持一致。
-    ///
-    /// # 错误
-    ///
-    /// 当 `account` 不存在时返回 [`UpdateReaderError::NonExistedAccount`]；
-    /// 仓储访问失败时返回 [`UpdateReaderError::Backend`]。
-    fn update(&self, reader: Reader) -> Result<(), UpdateReaderError>;
-}
-
 /// 读者仓储的异步契约，供 sqlx 等异步后端实现。
-///
-/// 语义、错误类型与唯一性约束都与同步版 [`ReaderRepository`] 完全一致，
-/// 区别仅在于方法是 `async`，实现里可以 `await` 数据库 IO。
-/// 两个契约暂时并存，调用方按后端能力选择；迁移完成后可移除同步版本。
 #[async_trait::async_trait]
 pub trait AsyncReaderRepository: Send {
     /// 新增一名读者。

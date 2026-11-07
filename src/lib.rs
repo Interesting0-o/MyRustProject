@@ -4,13 +4,10 @@
 //!
 //! - [`schema`]：领域类型本身，纯数据，不依赖其他层。
 //! - [`adapter`]：仓储 trait，描述领域对象需要哪些持久化操作。
-//! - [`infrastructure`]：仓储的具体实现（内存 / txt / json / sqlite），实现 [`adapter`] 里的 trait。
-//! - [`service`]：业务用例（借书、还书、登录、注册），只依赖上面几层的抽象。
+//! - [`infrastructure`]：仓储的具体实现（sqlx/MySQL），实现 [`adapter`] 里的 trait。
+//! - [`service`]：业务用例（借书、还书、登录、注册、更新），只依赖上面几层的抽象。
 //!
-//! 命令行界面不在这里——`src/cli/` 由二进制 crate 声明，属于组装根，
-//! 直接读写 `stdin`/`stdout`，不应混进纯业务的 `service` 层。
-//!
-//! 各层的公开类型在 crate 根部统一再导出一份，调用方直接 `use book_manager::BookRepository`
+//! 各层的公开类型在 crate 根部统一再导出一份，调用方直接 `use book_manager::AsyncBookRepository`
 //! 即可，不必关心它来自哪个子模块；子模块本身仍是公开的，需要精确路径时仍可深入引用。
 
 pub mod adapter;
@@ -18,65 +15,33 @@ pub mod api;
 pub mod infrastructure;
 pub mod schema;
 pub mod service;
-pub mod utils;
+
 // ---- 领域类型 ----
 pub use crate::schema::{Book, BorrowRecord, Librarian, Reader};
 
 // ---- 仓储抽象：业务层只依赖这些 trait，不关心具体实现 ----
 pub use crate::adapter::{
     BackendError,
-    book_repo::{
-        AddBookError, AsyncBookRepository, BookRepository, FindBookError, UpdateBookError,
-    },
-    borrow_record_repo::{
-        AsyncBorrowRecordRepository, BorrowRecordRepository, RemoveBorrowRecordError,
-    },
+    book_repo::{AddBookError, AsyncBookRepository, FindBookError, UpdateBookError},
+    borrow_record_repo::{AsyncBorrowRecordRepository, RemoveBorrowRecordError},
     librarian_repo::{
-        AddLibrarianError, AsyncLibrarianRepository, FindLibrarianError, LibrarianRepository,
-        UpdateLibrarianError,
+        AddLibrarianError, AsyncLibrarianRepository, FindLibrarianError, UpdateLibrarianError,
     },
-    reader_repo::{
-        AddReaderError, AsyncReaderRepository, FindReaderError, ReaderRepository, UpdateReaderError,
-    },
-    unit_of_work::{
-        AsyncRepositoryGroup, AsyncUnitOfWork, RepositoryGroup, UnitOfWork, UnitOfWorkError,
-    },
+    reader_repo::{AddReaderError, AsyncReaderRepository, FindReaderError, UpdateReaderError},
+    unit_of_work::{AsyncRepositoryGroup, AsyncUnitOfWork, UnitOfWorkError},
 };
 
 // ---- 业务用例 ----
 pub use crate::service::{
-    borrow_book::{BorrowBookError, borrow_book},
-    login::{LoginError, librarian_login, reader_login},
-    return_book::{ReturnBookError, return_book},
-    sign_up::{SignUpRes, librarian_sign_up, reader_sign_up},
-    update_book::{UpdateBookProfileError, update_book},
-    update_reader::{UpdateReaderProfileError, update_reader},
+    borrow_book::{BorrowBookError, async_borrow_book},
+    login::{LoginError, async_librarian_login, async_reader_login},
+    return_book::{ReturnBookError, async_return_book},
+    sign_up::{SignUpRes, async_librarian_sign_up, async_reader_sign_up},
+    update_book::{UpdateBookProfileError, async_update_book},
+    update_reader::{UpdateReaderProfileError, async_update_reader},
 };
 
-// ---- 仓储实现：仅供组装根（二进制 crate）挑选具体仓储 ----
-
-// 内存实现：数据只存在进程内，重启即丢失
-pub use crate::infrastructure::in_memory::{
-    InMemoryStore, InMemoryUnitOfWork, in_memory_book_repository::InMemoryBookRepository,
-    in_memory_borrow_record_repository::InMemoryBorrowRecordRepository,
-    in_memory_librarian_repository::InMemoryLibrarianRepository,
-    in_memory_reader_repository::InMemoryReaderRepository,
+// ---- 仓储实现：sqlx/MySQL ----
+pub use crate::infrastructure::mysql_base::{
+    MySqlUNewError, MySqlUnitOfWork, new_mysql_uow, with_mysql_uow,
 };
-
-// txt 实现：数据落盘到 resource/txt/*.txt
-pub use crate::infrastructure::txt_base::{
-    TXTBaseNewError, txt_base_book_repo::TxtBaseBookRepository,
-    txt_base_borrow_record_repo::TXTBaseBorrowRecordRepository,
-    txt_base_librarian_repo::TxtBaseLibrarianRepository,
-    txt_base_reader_repo::TXTBaseReaderRepository,
-};
-
-// json 实现：数据落盘到 resource/json/*.json
-pub use crate::infrastructure::json_base::{
-    JSONBaseNewError, json_base_book_repo::JSONBaseBookRepository,
-    json_base_borrow_record_repo::JSONBaseBorrowRecordRepository,
-    json_base_librarian_repo::JSONBaseLibrarianRepository,
-    json_base_reader_repo::JSONBaseReaderRepository,
-};
-
-// sqlx 实现，mariadb实现数据库的连接;

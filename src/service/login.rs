@@ -1,5 +1,5 @@
 use crate::{
-    AsyncUnitOfWork, BackendError, Librarian, Reader, UnitOfWork,
+    AsyncUnitOfWork, BackendError, Librarian, Reader,
     adapter::{librarian_repo::FindLibrarianError, reader_repo::FindReaderError},
 };
 
@@ -10,36 +10,6 @@ pub enum LoginError {
     RepositoryError(BackendError),
 }
 
-pub fn reader_login<U: UnitOfWork>(
-    uow: &U,
-    account: &str,
-    pwd: &str,
-) -> Result<Reader, LoginError> {
-    let repo_group = uow.repositories();
-    let reader_repo = repo_group.reader();
-    match reader_repo.find_reader_by_account(account) {
-        Ok(r) if r.hash_pwd == str_hash(pwd) => Ok(r),
-        Ok(_) => Err(LoginError::PasswordError),
-        Err(FindReaderError::NoResult) => Err(LoginError::AccountNotFound),
-        Err(FindReaderError::Backend(e)) => Err(LoginError::RepositoryError(e)),
-    }
-}
-
-pub fn librarian_login<U: UnitOfWork>(
-    uow: &U,
-    account: &str,
-    pwd: &str,
-) -> Result<Librarian, LoginError> {
-    let repo_group = uow.repositories();
-    let librarian_repo = repo_group.librarian();
-    match librarian_repo.find_librarian_by_account(account) {
-        Ok(l) if l.hash_pwd == str_hash(pwd) => Ok(l),
-        Ok(_) => Err(LoginError::PasswordError),
-        Err(FindLibrarianError::NoResult) => Err(LoginError::AccountNotFound),
-        Err(FindLibrarianError::Backend(e)) => Err(LoginError::RepositoryError(e)),
-    }
-}
-
 pub async fn async_reader_login<U: AsyncUnitOfWork>(
     uow: &mut U,
     account: &str,
@@ -48,7 +18,7 @@ pub async fn async_reader_login<U: AsyncUnitOfWork>(
     let mut repo_group = uow
         .repositories()
         .await
-        .map_err(|e| LoginError::RepositoryError(e))?;
+        .map_err(LoginError::RepositoryError)?;
     let mut reader_repo = repo_group.reader();
     match reader_repo.find_reader_by_account(account).await {
         Ok(r) if r.hash_pwd == str_hash(pwd) => Ok(r),
@@ -66,7 +36,7 @@ pub async fn async_librarian_login<U: AsyncUnitOfWork>(
     let mut repo_group = uow
         .repositories()
         .await
-        .map_err(|e| LoginError::RepositoryError(e))?;
+        .map_err(LoginError::RepositoryError)?;
     let mut librarian_repo = repo_group.librarian();
     match librarian_repo.find_librarian_by_account(account).await {
         Ok(l) if l.hash_pwd == str_hash(pwd) => Ok(l),

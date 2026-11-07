@@ -132,7 +132,6 @@ dependencies = [
  "async-trait",
  "axum",
  "serde",
- "serde_json",
  "sqlx",
  "tokio",
 ]
