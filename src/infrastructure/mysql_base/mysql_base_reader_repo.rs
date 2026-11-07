@@ -45,12 +45,11 @@ impl<'a> AsyncReaderRepository for MySqlBaseReaderRepository<'a> {
             .execute(&mut *self.conn)
             .await
             .map_err(|e| {
-                if let sqlx::Error::Database(db_err) = &e {
-                    if let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>() {
-                        if mysql_err.number() == 1062 {
-                            return AddReaderError::AccountAlreadyExists;
-                        }
-                    }
+                if let sqlx::Error::Database(db_err) = &e
+                    && let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>()
+                    && mysql_err.number() == 1062
+                {
+                    return AddReaderError::AccountAlreadyExists;
                 }
                 AddReaderError::Backend(Box::new(e))
             })?;

@@ -116,16 +116,16 @@ where
     C: DerefMut<Target = MySqlConnection> + Send,
 {
     fn book(&mut self) -> Box<dyn AsyncBookRepository + '_> {
-        Box::new(MySqlBaseBookRepository::new(&mut *self.conn))
+        Box::new(MySqlBaseBookRepository::new(&mut self.conn))
     }
     fn reader(&mut self) -> Box<dyn AsyncReaderRepository + '_> {
-        Box::new(MySqlBaseReaderRepository::new(&mut *self.conn))
+        Box::new(MySqlBaseReaderRepository::new(&mut self.conn))
     }
 
     fn librarian(&mut self) -> Box<dyn AsyncLibrarianRepository + '_> {
-        Box::new(MySqlBaseLibrarianRepository::new(&mut *self.conn))
+        Box::new(MySqlBaseLibrarianRepository::new(&mut self.conn))
     }
     fn borrow_record(&mut self) -> Box<dyn AsyncBorrowRecordRepository + '_> {
-        Box::new(MySqlBaseBorrowRecorRepository::new(&mut *self.conn))
+        Box::new(MySqlBaseBorrowRecorRepository::new(&mut self.conn))
     }
 }

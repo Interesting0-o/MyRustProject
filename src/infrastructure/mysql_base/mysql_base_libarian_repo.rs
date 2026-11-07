@@ -43,12 +43,11 @@ impl<'a> AsyncLibrarianRepository for MySqlBaseLibrarianRepository<'a> {
             .execute(&mut *self.conn)
             .await
             .map_err(|e| {
-                if let sqlx::Error::Database(db_err) = &e {
-                    if let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>() {
-                        if mysql_err.number() == 1062 {
-                            return AddLibrarianError::AccountAlreadyExists;
-                        }
-                    }
+                if let sqlx::Error::Database(db_err) = &e
+                    && let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>()
+                    && mysql_err.number() == 1062
+                {
+                    return AddLibrarianError::AccountAlreadyExists;
                 }
                 AddLibrarianError::Backend(Box::new(e))
             })?;
@@ -63,7 +62,7 @@ impl<'a> AsyncLibrarianRepository for MySqlBaseLibrarianRepository<'a> {
     async fn update(&mut self, librarian: Librarian) -> Result<(), UpdateLibrarianError> {
         let res = sqlx::query("UPDATE librarian SET name=?,hash_pwd=? WHERE account = ?")
             .bind(&librarian.name)
-            .bind(&librarian.hash_pwd)
+            .bind(librarian.hash_pwd)
             .bind(&librarian.account)
             .execute(&mut *self.conn)
             .await

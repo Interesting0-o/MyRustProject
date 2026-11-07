@@ -39,17 +39,16 @@ impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
             .bind(&book.bid)
             .bind(&book.name)
             .bind(&book.author)
-            .bind(&book.price)
-            .bind(&book.num)
+            .bind(book.price)
+            .bind(book.num)
             .execute(&mut *self.conn)
             .await
             .map_err(|e| {
-                if let sqlx::Error::Database(db_err) = &e {
-                    if let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>() {
-                        if mysql_err.number() == 1062 {
-                            return AddBookError::BIDAlreadyExists;
-                        }
-                    }
+                if let sqlx::Error::Database(db_err) = &e
+                    && let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>()
+                    && mysql_err.number() == 1062
+                {
+                    return AddBookError::BIDAlreadyExists;
                 }
                 AddBookError::Backend(Box::new(e))
             })?;
@@ -68,8 +67,8 @@ impl<'a> AsyncBookRepository for MySqlBaseBookRepository<'a> {
             sqlx::query("UPDATE books SET name = ?, author = ?, price = ?, num = ? WHERE bid = ?")
                 .bind(&book.name)
                 .bind(&book.author)
-                .bind(&book.price)
-                .bind(&book.num)
+                .bind(book.price)
+                .bind(book.num)
                 .bind(&book.bid)
                 .execute(&mut *self.conn)
                 .await
