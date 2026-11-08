@@ -9,11 +9,11 @@ use crate::{
     infrastructure::mysql_base::CreateTableError,
 };
 
-pub struct MySqlBaseBorrowRecorRepository<'a> {
+pub struct MySqlBaseBorrowRecordRepository<'a> {
     conn: &'a mut MySqlConnection,
 }
 
-impl<'a> MySqlBaseBorrowRecorRepository<'a> {
+impl<'a> MySqlBaseBorrowRecordRepository<'a> {
     pub fn new(conn: &'a mut MySqlConnection) -> Self {
         Self { conn }
     }
@@ -37,7 +37,7 @@ pub async fn new_borrow_record_table(pool: &MySqlPool) -> Result<(), CreateTable
 }
 
 #[async_trait::async_trait]
-impl<'a> AsyncBorrowRecordRepository for MySqlBaseBorrowRecorRepository<'a> {
+impl<'a> AsyncBorrowRecordRepository for MySqlBaseBorrowRecordRepository<'a> {
     async fn add(&mut self, account: &str, bid: &str) -> Result<(), AddBorrowRecordError> {
         let max_id = sqlx::query_scalar::<_, u64>(
             "SELECT CAST(COALESCE(MAX(CAST(SUBSTRING(br_id, 3) AS UNSIGNED)), 0) AS UNSIGNED) \
@@ -59,7 +59,7 @@ impl<'a> AsyncBorrowRecordRepository for MySqlBaseBorrowRecorRepository<'a> {
                     && let Some(mysql_err) = db_err.try_downcast_ref::<MySqlDatabaseError>()
                     && mysql_err.number() == 1062
                 {
-                    return AddBorrowRecordError::BRIdIsAlreadyExiste;
+                    return AddBorrowRecordError::BRIdIsAlreadyExists;
                 }
                 AddBorrowRecordError::Backend(Box::new(e))
             })?;

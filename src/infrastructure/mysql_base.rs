@@ -1,16 +1,16 @@
 pub mod mysql_base_book_repo;
 pub mod mysql_base_borrow_record_repo;
-pub mod mysql_base_libarian_repo;
+pub mod mysql_base_librarian_repo;
 pub mod mysql_base_reader_repo;
 use std::{future::Future, ops::DerefMut, pin::Pin};
 
 use crate::{
     AsyncBookRepository, AsyncBorrowRecordRepository, AsyncLibrarianRepository,
     AsyncReaderRepository, AsyncRepositoryGroup, AsyncUnitOfWork, BackendError, UnitOfWorkError,
-    infrastructure::mysql_base::mysql_base_libarian_repo::MySqlBaseLibrarianRepository,
+    infrastructure::mysql_base::mysql_base_librarian_repo::MySqlBaseLibrarianRepository,
 };
 use mysql_base_book_repo::MySqlBaseBookRepository;
-use mysql_base_borrow_record_repo::MySqlBaseBorrowRecorRepository;
+use mysql_base_borrow_record_repo::MySqlBaseBorrowRecordRepository;
 use mysql_base_reader_repo::MySqlBaseReaderRepository;
 use sqlx::{
     MySqlPool,
@@ -126,6 +126,6 @@ where
         Box::new(MySqlBaseLibrarianRepository::new(&mut self.conn))
     }
     fn borrow_record(&mut self) -> Box<dyn AsyncBorrowRecordRepository + '_> {
-        Box::new(MySqlBaseBorrowRecorRepository::new(&mut self.conn))
+        Box::new(MySqlBaseBorrowRecordRepository::new(&mut self.conn))
     }
 }

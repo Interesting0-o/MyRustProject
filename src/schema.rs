@@ -1,5 +1,6 @@
 pub mod book;
 pub mod borrow_record;
+pub mod claims;
 pub mod librarian;
 pub mod reader;
 pub mod request;

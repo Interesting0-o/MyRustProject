@@ -6,7 +6,7 @@ use crate::{BorrowRecord, adapter::BackendError};
 #[derive(Debug)]
 pub enum AddBorrowRecordError {
     /// 业务规则：实现生成的 `br_id` 已存在。
-    BRIdIsAlreadyExiste,
+    BRIdIsAlreadyExists,
     /// 仓储故障（IO、序列化、锁中毒等）。
     Backend(BackendError),
 }

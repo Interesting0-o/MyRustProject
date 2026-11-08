@@ -3,7 +3,10 @@ use sqlx::{
     mysql::{MySqlConnection, MySqlDatabaseError},
 };
 
-use crate::{AddReaderError, AsyncReaderRepository, FindReaderError, Reader, UpdateReaderError};
+use crate::{
+    AddReaderError, AsyncReaderRepository, FindReaderError, Reader, UpdateReaderError,
+    infrastructure::mysql_base::CreateTableError,
+};
 
 pub struct MySqlBaseReaderRepository<'a> {
     conn: &'a mut MySqlConnection,
@@ -13,11 +16,6 @@ impl<'a> MySqlBaseReaderRepository<'a> {
     pub fn new(conn: &'a mut MySqlConnection) -> Self {
         Self { conn }
     }
-}
-
-#[derive(Debug)]
-pub enum CreateTableError {
-    ConnectError,
 }
 
 pub async fn new_reader_table(pool: &MySqlPool) -> Result<(), CreateTableError> {

@@ -20,7 +20,7 @@ fn response(success: bool, messages: &str, code: StatusCode) -> UpdateBookApiRes
     )
 }
 
-fn serve_error() -> UpdateBookApiResponse {
+fn server_error() -> UpdateBookApiResponse {
     response(false, "服务错误", StatusCode::FAILED_DEPENDENCY)
 }
 
@@ -33,7 +33,7 @@ fn handle_result(result: Result<(), UpdateBookProfileError>) -> UpdateBookApiRes
         Err(UpdateBookProfileError::NoChanges) => {
             response(false, "没有需要更新的内容", StatusCode::OK)
         }
-        Err(UpdateBookProfileError::RepositoryError(_)) => serve_error(),
+        Err(UpdateBookProfileError::RepositoryError(_)) => server_error(),
     }
 }
 

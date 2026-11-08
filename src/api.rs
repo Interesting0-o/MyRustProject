@@ -11,4 +11,6 @@ use sqlx::MySqlPool;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: MySqlPool,
+    pub jwt_expires_secs: u64,
+    pub jwt_secret: String,
 }

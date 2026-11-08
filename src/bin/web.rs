@@ -6,7 +6,14 @@ use sqlx::mysql::MySqlPoolOptions;
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
+
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL 未设置");
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET 未设置");
+    let jwt_expires_secs = match std::env::var("JWT_EXPIRES_SECS") {
+        Ok(res) => res.parse::<u64>().expect("JWT_EXPIRES_SECS 字段设置无效"),
+        Err(_) => (2 * 60 * 60) as u64,
+    };
     let pool = MySqlPoolOptions::new()
         .max_connections(10)
         .connect(&database_url)
@@ -21,7 +28,11 @@ async fn main() {
         .merge(find_book::router())
         .merge(update_book::router())
         .merge(update_reader::router())
-        .with_state(AppState { pool });
+        .with_state(AppState {
+            pool,
+            jwt_secret,
+            jwt_expires_secs,
+        });
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
