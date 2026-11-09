@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod borrow_book;
 pub mod find_book;
 pub mod login;
