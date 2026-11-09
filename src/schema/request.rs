@@ -16,13 +16,11 @@ pub struct SignUpRequest {
 #[derive(Deserialize)]
 pub struct BorrowBookRequest {
     pub bid: String,
-    pub account: String,
 }
 
 #[derive(Deserialize)]
 pub struct ReturnBookRequest {
     pub bid: String,
-    pub account: String,
 }
 
 #[derive(Deserialize)]
@@ -46,7 +44,6 @@ pub struct UpdateBookRequest {
 
 #[derive(Deserialize)]
 pub struct UpdateReaderRequest {
-    pub account: String,
     pub name: Option<String>,
     pub current_password: Option<String>,
     pub new_password: Option<String>,

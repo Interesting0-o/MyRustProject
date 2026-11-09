@@ -1,10 +1,10 @@
-use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
+use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::{
     UpdateReaderProfileError,
     api::AppState,
     async_update_reader,
-    schema::{request::UpdateReaderRequest, response::UpdateReaderResponse},
+    schema::{claims::Claims, request::UpdateReaderRequest, response::UpdateReaderResponse},
     with_mysql_uow,
 };
 
@@ -42,9 +42,10 @@ fn handle_result(result: Result<(), UpdateReaderProfileError>) -> UpdateReaderAp
 
 pub async fn update_reader_api(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Json(req): Json<UpdateReaderRequest>,
 ) -> UpdateReaderApiResponse {
-    let account = req.account.trim();
+    let account = claims.sub.trim();
 
     if account.is_empty() {
         return response(false, "请输入账号", StatusCode::BAD_REQUEST);

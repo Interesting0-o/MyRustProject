@@ -1,10 +1,10 @@
-use axum::{Json, Router, extract::State, http::StatusCode, routing::post};
+use axum::{Extension, Json, Router, extract::State, http::StatusCode, routing::post};
 
 use crate::{
     ReturnBookError,
     api::AppState,
     async_return_book,
-    schema::{request::ReturnBookRequest, response::ReturnBookResponse},
+    schema::{claims::Claims, request::ReturnBookRequest, response::ReturnBookResponse},
     with_mysql_uow,
 };
 
@@ -39,10 +39,11 @@ fn handle_result(result: Result<(), ReturnBookError>) -> ReturnBookApiResponse {
 
 pub async fn return_book_api(
     State(state): State<AppState>,
+    Extension(claims): Extension<Claims>,
     Json(req): Json<ReturnBookRequest>,
 ) -> ReturnBookApiResponse {
     with_mysql_uow(&state.pool, async |uow| {
-        handle_result(async_return_book(uow, &req.account, &req.bid).await)
+        handle_result(async_return_book(uow, &claims.sub, &req.bid).await)
     })
     .await
 }

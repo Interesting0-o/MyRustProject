@@ -1,6 +1,7 @@
-use axum::Router;
+use axum::{Router, middleware};
 use book_manager::api::{
-    AppState, borrow_book, find_book, login, return_book, sign_up, update_book, update_reader,
+    AppState, auth::auth_middleware, borrow_book, find_book, login, return_book, sign_up,
+    update_book, update_reader,
 };
 use sqlx::mysql::MySqlPoolOptions;
 
@@ -20,19 +21,27 @@ async fn main() {
         .await
         .expect("连接数据库失败");
 
+    let state = AppState {
+        pool,
+        jwt_secret,
+        jwt_expires_secs,
+    };
+    let app_protect = Router::new()
+        .merge(borrow_book::router())
+        .merge(update_book::router())
+        .merge(find_book::router())
+        .merge(update_reader::router())
+        .merge(return_book::router())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        ));
+
     let app = Router::new()
         .merge(login::router())
         .merge(sign_up::router())
-        .merge(borrow_book::router())
-        .merge(return_book::router())
-        .merge(find_book::router())
-        .merge(update_book::router())
-        .merge(update_reader::router())
-        .with_state(AppState {
-            pool,
-            jwt_secret,
-            jwt_expires_secs,
-        });
+        .merge(app_protect)
+        .with_state(state.clone());
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
