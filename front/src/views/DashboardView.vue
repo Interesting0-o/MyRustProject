@@ -22,8 +22,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const activity = useActivityStore()
 
-const borrowForm = reactive({ account: '', bid: '' })
-const returnForm = reactive({ account: '', bid: '' })
+const borrowForm = reactive({ bid: '' })
+const returnForm = reactive({ bid: '' })
 const feedback = reactive({ borrow: null, return: null })
 const pending = reactive({ borrow: false, return: false })
 
@@ -75,13 +75,13 @@ const greeting = computed(() => {
 
 const heroDescription = computed(() =>
   isLibrarian.value
-    ? '输入读者账号与图书编号，为读者办理每一次借阅和归还。'
+    ? '查询馆藏、维护图书信息，借阅与归还由读者本人办理。'
     : '管理你的借阅进度，输入图书编号即可借阅新书或归还已读书籍。',
 )
 
 const heroTip = computed(() =>
   isLibrarian.value
-    ? '可先按书名或编号查询馆藏，在搜索结果中维护图书信息，再为读者办理借还。'
+    ? '可先按书名或编号查询馆藏，在搜索结果中维护图书信息。'
     : '可先在馆藏查询中确认图书编号与库存，再办理借阅或归还。',
 )
 
@@ -368,7 +368,7 @@ async function submitReaderProfile() {
   }
 
   profilePending.value = true
-  const result = await updateReaderApi(auth.account, {
+  const result = await updateReaderApi({
     name: nameChanged ? name : undefined,
     currentPassword: wantsPasswordChange ? currentPassword : undefined,
     newPassword: wantsPasswordChange ? newPassword : undefined,
@@ -398,13 +398,7 @@ async function submitBorrow() {
 
   feedback.borrow = null
 
-  const account = isLibrarian.value ? borrowForm.account.trim() : auth.account
   const bid = borrowForm.bid.trim()
-
-  if (!account) {
-    feedback.borrow = { type: 'error', text: '请输入读者账号' }
-    return
-  }
 
   if (!bid) {
     feedback.borrow = { type: 'error', text: '请输入图书编号' }
@@ -412,14 +406,13 @@ async function submitBorrow() {
   }
 
   pending.borrow = true
-  const result = await borrowBook(account, bid)
+  const result = await borrowBook(bid)
   pending.borrow = false
 
   const message = result.messages || (result.success ? '借书成功' : '借书失败，请稍后重试')
   feedback.borrow = { type: result.success ? 'success' : 'error', text: message }
   activity.record({
     action: '借阅',
-    account,
     bid,
     success: result.success,
     message,
@@ -436,13 +429,7 @@ async function submitReturn() {
 
   feedback.return = null
 
-  const account = isLibrarian.value ? returnForm.account.trim() : auth.account
   const bid = returnForm.bid.trim()
-
-  if (!account) {
-    feedback.return = { type: 'error', text: '请输入读者账号' }
-    return
-  }
 
   if (!bid) {
     feedback.return = { type: 'error', text: '请输入图书编号' }
@@ -450,14 +437,13 @@ async function submitReturn() {
   }
 
   pending.return = true
-  const result = await returnBook(account, bid)
+  const result = await returnBook(bid)
   pending.return = false
 
   const message = result.messages || (result.success ? '还书成功' : '还书失败，请稍后重试')
   feedback.return = { type: result.success ? 'success' : 'error', text: message }
   activity.record({
     action: '归还',
-    account,
     bid,
     success: result.success,
     message,
@@ -521,7 +507,7 @@ function handleSignOut() {
             <p>
               {{
                 isLibrarian
-                  ? '按完整书名或图书编号查找馆藏，确认库存后办理借阅；也可在结果中维护图书信息。'
+                  ? '按完整书名或图书编号查找馆藏，并在结果中维护图书信息。'
                   : '按完整书名或图书编号查找馆藏，确认库存后再办理借阅。'
               }}
             </p>
@@ -601,6 +587,7 @@ function handleSignOut() {
                     编辑
                   </button>
                   <button
+                    v-if="!isLibrarian"
                     type="button"
                     class="book-card__action"
                     :disabled="book.num === 0"
@@ -638,7 +625,7 @@ function handleSignOut() {
       </section>
 
       <section class="workspace">
-        <div class="action-grid">
+        <div v-if="!isLibrarian" class="action-grid">
           <form
             ref="borrowCardRef"
             class="action-card action-card--borrow"
@@ -673,21 +660,10 @@ function handleSignOut() {
               </div>
             </div>
 
-            <div v-if="!isLibrarian" class="account-note">
+            <div class="account-note">
               <span class="account-note__dot"></span>
               以 <strong>{{ auth.account }}</strong> 的身份办理
             </div>
-
-            <label v-else class="field">
-              <span class="field__label">读者账号</span>
-              <input
-                v-model="borrowForm.account"
-                type="text"
-                name="borrow-account"
-                autocomplete="off"
-                placeholder="例如 r001"
-              />
-            </label>
 
             <label class="field">
               <span class="field__label">图书编号</span>
@@ -756,21 +732,10 @@ function handleSignOut() {
               </div>
             </div>
 
-            <div v-if="!isLibrarian" class="account-note">
+            <div class="account-note">
               <span class="account-note__dot"></span>
               以 <strong>{{ auth.account }}</strong> 的身份办理
             </div>
-
-            <label v-else class="field">
-              <span class="field__label">读者账号</span>
-              <input
-                v-model="returnForm.account"
-                type="text"
-                name="return-account"
-                autocomplete="off"
-                placeholder="例如 r001"
-              />
-            </label>
 
             <label class="field">
               <span class="field__label">图书编号</span>
@@ -805,6 +770,14 @@ function handleSignOut() {
               </svg>
             </button>
           </form>
+        </div>
+        <div v-else class="action-card">
+          <div class="action-card__head">
+            <div>
+              <h2>借阅与归还</h2>
+              <p>借阅与归还由读者使用本人账号登录后办理。</p>
+            </div>
+          </div>
         </div>
 
         <aside class="side-column">
@@ -879,9 +852,6 @@ function handleSignOut() {
                     <time :datetime="entry.at">{{ formatTime(entry.at) }}</time>
                   </div>
                   <p>{{ entry.message }}</p>
-                  <p v-if="isLibrarian && entry.account" class="activity-list__account">
-                    读者 {{ entry.account }}
-                  </p>
                 </div>
               </li>
             </ol>
@@ -1989,10 +1959,6 @@ function handleSignOut() {
   margin-top: 2px;
   color: var(--ink-muted);
   font-size: 0.76rem;
-}
-
-.activity-list__body .activity-list__account {
-  color: var(--forest-soft);
 }
 
 .activity-empty {

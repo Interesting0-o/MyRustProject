@@ -1,9 +1,9 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { login as loginApi } from '@/api'
+import { AUTH_STORAGE_KEY, login as loginApi } from '@/api'
 
-const STORAGE_KEY = 'book-manager.auth'
+const STORAGE_KEY = AUTH_STORAGE_KEY
 const ROLES = ['reader', 'librarian']
 
 function readSession() {

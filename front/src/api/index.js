@@ -1,8 +1,23 @@
 import axios from 'axios'
 
+export const AUTH_STORAGE_KEY = 'book-manager.auth'
+
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 15000,
+})
+
+client.interceptors.request.use((config) => {
+  try {
+    const session = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null')
+    if (session?.token) {
+      config.headers.Authorization = `Bearer ${session.token}`
+    }
+  } catch {
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+  }
+
+  return config
 })
 
 const loginPaths = {
@@ -48,12 +63,12 @@ export function signUp(role, profile) {
   return post(signUpPaths[role], profile)
 }
 
-export function borrowBook(account, bid) {
-  return post('/borrow_book', { account, bid })
+export function borrowBook(bid) {
+  return post('/borrow_book', { bid })
 }
 
-export function returnBook(account, bid) {
-  return post('/return_book', { account, bid })
+export function returnBook(bid) {
+  return post('/return_book', { bid })
 }
 
 export function findBookByBid(bid) {
@@ -76,9 +91,8 @@ export function updateBookNum(bid, num) {
   return post('/update_book_num', { bid, num })
 }
 
-export function updateReader(account, { name, currentPassword, newPassword } = {}) {
+export function updateReader({ name, currentPassword, newPassword } = {}) {
   return post('/update_reader', {
-    account,
     name,
     current_password: currentPassword,
     new_password: newPassword,
