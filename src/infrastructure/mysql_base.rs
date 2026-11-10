@@ -4,6 +4,11 @@ pub mod mysql_base_librarian_repo;
 pub mod mysql_base_reader_repo;
 use std::{future::Future, ops::DerefMut, pin::Pin};
 
+pub use mysql_base_book_repo::new_book_table;
+pub use mysql_base_borrow_record_repo::new_borrow_record_table;
+pub use mysql_base_librarian_repo::new_librarian_table;
+pub use mysql_base_reader_repo::new_reader_table;
+
 use crate::{
     AsyncBookRepository, AsyncBorrowRecordRepository, AsyncLibrarianRepository,
     AsyncReaderRepository, AsyncRepositoryGroup, AsyncUnitOfWork, BackendError, UnitOfWorkError,
@@ -17,6 +22,7 @@ use sqlx::{
     mysql::{MySqlConnection, MySqlPoolOptions},
 };
 
+#[derive(Debug)]
 pub enum CreateTableError {
     ConnectError,
 }
