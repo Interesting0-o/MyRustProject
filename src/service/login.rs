@@ -3,6 +3,7 @@ use crate::{
     adapter::{librarian_repo::FindLibrarianError, reader_repo::FindReaderError},
 };
 
+#[derive(Debug)]
 pub enum LoginError {
     AccountNotFound,
     PasswordError,
