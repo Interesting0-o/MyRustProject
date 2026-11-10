@@ -33,7 +33,7 @@ fn server_error() -> FindBookApiResponse {
         false,
         "服务器错误",
         Vec::new(),
-        StatusCode::FAILED_DEPENDENCY,
+        StatusCode::INTERNAL_SERVER_ERROR,
     )
 }
 

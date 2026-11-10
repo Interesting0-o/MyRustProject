@@ -21,14 +21,14 @@ fn response(success: bool, messages: &str, status: StatusCode) -> BorrowBookApiR
 }
 
 fn server_error() -> BorrowBookApiResponse {
-    response(false, "服务器错误", StatusCode::FAILED_DEPENDENCY)
+    response(false, "服务器错误", StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn handle_result(result: Result<(), BorrowBookError>) -> BorrowBookApiResponse {
     match result {
         Ok(()) => response(true, "借书成功", StatusCode::OK),
-        Err(BorrowBookError::NonExistBID) => response(false, "图书不存在", StatusCode::OK),
-        Err(BorrowBookError::BookNumIsZero) => response(false, "图书已借完", StatusCode::OK),
+        Err(BorrowBookError::NonExistBID) => response(false, "图书不存在", StatusCode::NOT_FOUND),
+        Err(BorrowBookError::BookNumIsZero) => response(false, "图书已借完", StatusCode::CONFLICT),
         Err(_) => server_error(),
     }
 }

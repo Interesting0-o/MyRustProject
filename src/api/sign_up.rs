@@ -22,13 +22,15 @@ fn response(success: bool, messages: &str, status: StatusCode) -> SignUpApiRespo
 }
 
 fn server_error() -> SignUpApiResponse {
-    response(false, "服务器错误", StatusCode::FAILED_DEPENDENCY)
+    response(false, "服务器错误", StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn handle_result(result: Result<(), SignUpRes>) -> SignUpApiResponse {
     match result {
-        Ok(()) => response(true, "注册成功", StatusCode::OK),
-        Err(SignUpRes::AccountAlreadyExists) => response(false, "账号已被注册", StatusCode::OK),
+        Ok(()) => response(true, "注册成功", StatusCode::CREATED),
+        Err(SignUpRes::AccountAlreadyExists) => {
+            response(false, "账号已被注册", StatusCode::CONFLICT)
+        }
         Err(SignUpRes::RepositoryError(_)) => server_error(),
     }
 }

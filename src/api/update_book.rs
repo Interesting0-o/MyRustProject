@@ -21,14 +21,14 @@ fn response(success: bool, messages: &str, code: StatusCode) -> UpdateBookApiRes
 }
 
 fn server_error() -> UpdateBookApiResponse {
-    response(false, "服务错误", StatusCode::FAILED_DEPENDENCY)
+    response(false, "服务错误", StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 fn handle_result(result: Result<(), UpdateBookProfileError>) -> UpdateBookApiResponse {
     match result {
         Ok(()) => response(true, "更新成功", StatusCode::OK),
         Err(UpdateBookProfileError::NonExistBID) => {
-            response(false, "BID不存在", StatusCode::FAILED_DEPENDENCY)
+            response(false, "BID不存在", StatusCode::NOT_FOUND)
         }
         Err(UpdateBookProfileError::NoChanges) => {
             response(false, "没有需要更新的内容", StatusCode::OK)
@@ -42,7 +42,7 @@ pub async fn update_book_name_api(
     Json(req): Json<UpdateBookRequest>,
 ) -> UpdateBookApiResponse {
     if req.name.is_none() {
-        return response(false, "参数不匹配", StatusCode::FAILED_DEPENDENCY);
+        return response(false, "参数不匹配", StatusCode::BAD_REQUEST);
     }
 
     with_mysql_uow(&state.pool, async |uow| {
@@ -56,7 +56,7 @@ pub async fn update_book_author_api(
     Json(req): Json<UpdateBookRequest>,
 ) -> UpdateBookApiResponse {
     if req.author.is_none() {
-        return response(false, "参数不匹配", StatusCode::FAILED_DEPENDENCY);
+        return response(false, "参数不匹配", StatusCode::BAD_REQUEST);
     }
 
     with_mysql_uow(&state.pool, async |uow| {
@@ -72,7 +72,7 @@ pub async fn update_book_price_api(
     Json(req): Json<UpdateBookRequest>,
 ) -> UpdateBookApiResponse {
     if req.price.is_none() {
-        return response(false, "参数不匹配", StatusCode::FAILED_DEPENDENCY);
+        return response(false, "参数不匹配", StatusCode::BAD_REQUEST);
     }
 
     with_mysql_uow(&state.pool, async |uow| {
@@ -86,7 +86,7 @@ pub async fn update_book_num_api(
     Json(req): Json<UpdateBookRequest>,
 ) -> UpdateBookApiResponse {
     if req.num.is_none() {
-        return response(false, "参数不匹配", StatusCode::FAILED_DEPENDENCY);
+        return response(false, "参数不匹配", StatusCode::BAD_REQUEST);
     }
 
     with_mysql_uow(&state.pool, async |uow| {

@@ -3,6 +3,7 @@ use crate::{
     adapter::{book_repo::UpdateBookError, borrow_record_repo::AddBorrowRecordError},
 };
 
+#[derive(Debug)]
 pub enum BorrowBookError {
     NonExistBID,
     BookNumIsZero,

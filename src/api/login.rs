@@ -35,7 +35,7 @@ fn server_error() -> LoginApiResponse {
         "服务器错误",
         None,
         None,
-        StatusCode::FAILED_DEPENDENCY,
+        StatusCode::INTERNAL_SERVER_ERROR,
     )
 }
 
@@ -52,7 +52,13 @@ fn handle_result(
             }
         }
         Err(LoginError::RepositoryError(_)) => server_error(),
-        Err(_) => response(false, "账号或密码错误", None, None, StatusCode::OK),
+        Err(_) => response(
+            false,
+            "账号或密码错误",
+            None,
+            None,
+            StatusCode::UNAUTHORIZED,
+        ),
     }
 }
 
