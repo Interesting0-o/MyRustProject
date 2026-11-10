@@ -1,27 +1,9 @@
-use sqlx::{
-    MySqlPool,
-    mysql::{MySqlConnection, MySqlDatabaseError},
-};
+use sqlx::mysql::{MySqlConnection, MySqlDatabaseError};
 
 use crate::{
     AddLibrarianError, AsyncLibrarianRepository, FindLibrarianError, Librarian,
-    UpdateLibrarianError, infrastructure::mysql_base::CreateTableError,
+    UpdateLibrarianError,
 };
-
-pub async fn new_librarian_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS librarian (
-            account VARCHAR(64) PRIMARY KEY,            -- 对应 String，用户账号
-            name VARCHAR(255) NOT NULL,                 -- 对应 String 用户名
-            hash_pwd BIGINT UNSIGNED NOT NULL           -- 对应 u64 用户密码的哈希值
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"#,
-    )
-    .execute(pool)
-    .await
-    .map_err(|_| CreateTableError::ConnectError)?;
-    Ok(())
-}
 
 pub struct MySqlBaseLibrarianRepository<'a> {
     conn: &'a mut MySqlConnection,

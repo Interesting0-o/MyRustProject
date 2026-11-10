@@ -3,9 +3,7 @@ use book_manager::api::{
     AppState, auth::auth_middleware, borrow_book, find_book, login, return_book, sign_up,
     update_book, update_reader,
 };
-use book_manager::{
-    new_book_table, new_borrow_record_table, new_librarian_table, new_reader_table,
-};
+use book_manager::run_migrations;
 use sqlx::mysql::MySqlPoolOptions;
 
 #[tokio::main]
@@ -24,14 +22,7 @@ async fn main() {
         .await
         .expect("连接数据库失败");
 
-    new_reader_table(&pool).await.expect("创建 readers 表失败");
-    new_librarian_table(&pool)
-        .await
-        .expect("创建 librarian 表失败");
-    new_book_table(&pool).await.expect("创建 books 表失败");
-    new_borrow_record_table(&pool)
-        .await
-        .expect("创建 borrow_record 表失败");
+    run_migrations(&pool).await.expect("执行数据库迁移失败");
 
     let state = AppState {
         pool,

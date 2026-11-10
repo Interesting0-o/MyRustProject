@@ -4,11 +4,6 @@ pub mod mysql_base_librarian_repo;
 pub mod mysql_base_reader_repo;
 use std::{future::Future, ops::DerefMut, pin::Pin};
 
-pub use mysql_base_book_repo::new_book_table;
-pub use mysql_base_borrow_record_repo::new_borrow_record_table;
-pub use mysql_base_librarian_repo::new_librarian_table;
-pub use mysql_base_reader_repo::new_reader_table;
-
 use crate::{
     AsyncBookRepository, AsyncBorrowRecordRepository, AsyncLibrarianRepository,
     AsyncReaderRepository, AsyncRepositoryGroup, AsyncUnitOfWork, BackendError, UnitOfWorkError,
@@ -22,9 +17,31 @@ use sqlx::{
     mysql::{MySqlConnection, MySqlPoolOptions},
 };
 
-#[derive(Debug)]
-pub enum CreateTableError {
-    ConnectError,
+pub async fn run_migrations(pool: &MySqlPool) -> Result<(), BackendError> {
+    // sqlx 内部用 GET_LOCK(?, -1) 加锁，MariaDB 会返回 NULL 导致锁失效，
+    // 这里显式加锁，保证多实例/并发启动时迁移不会重复执行。
+    let mut lock_conn = pool
+        .acquire()
+        .await
+        .map_err(|e| Box::new(e) as BackendError)?;
+    let acquired: Option<i64> = sqlx::query_scalar("SELECT GET_LOCK(?, 60)")
+        .bind("book_manager_migrations")
+        .fetch_one(&mut *lock_conn)
+        .await
+        .map_err(|e| Box::new(e) as BackendError)?;
+
+    if acquired != Some(1) {
+        return Err(Box::new(std::io::Error::other("获取数据库迁移锁超时")));
+    }
+
+    let result = sqlx::migrate!("./migrations").run(pool).await;
+
+    let _ = sqlx::query_scalar::<_, Option<i64>>("SELECT RELEASE_LOCK(?)")
+        .bind("book_manager_migrations")
+        .fetch_one(&mut *lock_conn)
+        .await;
+
+    result.map_err(|e| Box::new(e) as BackendError)
 }
 
 #[derive(Debug)]

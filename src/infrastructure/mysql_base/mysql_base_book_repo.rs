@@ -1,12 +1,6 @@
-use sqlx::{
-    MySqlPool,
-    mysql::{MySqlConnection, MySqlDatabaseError},
-};
+use sqlx::mysql::{MySqlConnection, MySqlDatabaseError};
 
-use crate::{
-    AddBookError, AsyncBookRepository, Book, FindBookError, UpdateBookError,
-    infrastructure::mysql_base::CreateTableError,
-};
+use crate::{AddBookError, AsyncBookRepository, Book, FindBookError, UpdateBookError};
 
 pub struct MySqlBaseBookRepository<'a> {
     conn: &'a mut MySqlConnection,
@@ -16,20 +10,6 @@ impl<'a> MySqlBaseBookRepository<'a> {
     pub fn new(conn: &'a mut MySqlConnection) -> Self {
         Self { conn }
     }
-}
-
-pub async fn new_book_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
-    sqlx::query(r#"
-        CREATE TABLE IF NOT EXISTS books (
-            bid VARCHAR(64) PRIMARY KEY,              -- 对应 String，作为主键（假设是 ISBN 或 UUID）
-            name VARCHAR(255) NOT NULL,               -- 对应 String，书名
-            author VARCHAR(255) NOT NULL,             -- 对应 String，作者
-            price BIGINT NOT NULL,                    -- 对应 i64，价格（注意：这里存的是整数）
-            num INT UNSIGNED NOT NULL DEFAULT 0       -- 对应 u32，库存数量，无符号整数
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"#)
-        .execute(pool)
-        .await.map_err(|_|CreateTableError::ConnectError)?;
-    Ok(())
 }
 
 #[async_trait::async_trait]

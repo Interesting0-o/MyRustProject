@@ -1,12 +1,6 @@
-use sqlx::{
-    MySqlPool,
-    mysql::{MySqlConnection, MySqlDatabaseError},
-};
+use sqlx::mysql::{MySqlConnection, MySqlDatabaseError};
 
-use crate::{
-    AddReaderError, AsyncReaderRepository, FindReaderError, Reader, UpdateReaderError,
-    infrastructure::mysql_base::CreateTableError,
-};
+use crate::{AddReaderError, AsyncReaderRepository, FindReaderError, Reader, UpdateReaderError};
 
 pub struct MySqlBaseReaderRepository<'a> {
     conn: &'a mut MySqlConnection,
@@ -16,21 +10,6 @@ impl<'a> MySqlBaseReaderRepository<'a> {
     pub fn new(conn: &'a mut MySqlConnection) -> Self {
         Self { conn }
     }
-}
-
-pub async fn new_reader_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS readers (
-            account VARCHAR(64) PRIMARY KEY,          -- 对应 String，作为主键
-            name VARCHAR(255) NOT NULL,               -- 对应 String，姓名
-            hash_pwd BIGINT UNSIGNED NOT NULL         -- 对应 u64，密码摘要
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"#,
-    )
-    .execute(pool)
-    .await
-    .map_err(|_| CreateTableError::ConnectError)?;
-    Ok(())
 }
 
 #[async_trait::async_trait]

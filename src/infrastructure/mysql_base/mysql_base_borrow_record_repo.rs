@@ -1,12 +1,8 @@
-use sqlx::{
-    MySqlPool,
-    mysql::{MySqlConnection, MySqlDatabaseError},
-};
+use sqlx::mysql::{MySqlConnection, MySqlDatabaseError};
 
 use crate::{
     AsyncBorrowRecordRepository, BorrowRecord, RemoveBorrowRecordError,
     adapter::borrow_record_repo::{AddBorrowRecordError, FindBorrowRecordError},
-    infrastructure::mysql_base::CreateTableError,
 };
 
 pub struct MySqlBaseBorrowRecordRepository<'a> {
@@ -17,23 +13,6 @@ impl<'a> MySqlBaseBorrowRecordRepository<'a> {
     pub fn new(conn: &'a mut MySqlConnection) -> Self {
         Self { conn }
     }
-}
-
-pub async fn new_borrow_record_table(pool: &MySqlPool) -> Result<(), CreateTableError> {
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS borrow_record (
-            br_id VARCHAR(64) PRIMARY KEY,      -- 对应 String，记录编号，全局唯一
-            bid VARCHAR(64) NOT NULL,           -- 对应 String，books.bid
-            account VARCHAR(64) NOT NULL,       -- 对应 String，readers.account
-            INDEX idx_borrow_record_bid (bid),
-            INDEX idx_borrow_record_account (account)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"#,
-    )
-    .execute(pool)
-    .await
-    .map_err(|_| CreateTableError::ConnectError)?;
-    Ok(())
 }
 
 #[async_trait::async_trait]

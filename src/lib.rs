@@ -43,6 +43,5 @@ pub use crate::service::{
 
 // ---- 仓储实现：sqlx/MySQL ----
 pub use crate::infrastructure::mysql_base::{
-    MySqlUNewError, MySqlUnitOfWork, new_book_table, new_borrow_record_table, new_librarian_table,
-    new_mysql_uow, new_reader_table, with_mysql_uow,
+    MySqlUNewError, MySqlUnitOfWork, new_mysql_uow, run_migrations, with_mysql_uow,
 };
