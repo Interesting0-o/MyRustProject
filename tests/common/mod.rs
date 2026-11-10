@@ -15,6 +15,9 @@ pub async fn connect() -> MySqlPool {
 
 pub async fn setup() -> (MySqlPool, MySqlUnitOfWork) {
     let pool = connect().await;
+    book_manager::run_migrations(&pool)
+        .await
+        .expect("执行数据库迁移失败");
     (pool.clone(), MySqlUnitOfWork::new(pool))
 }
 
