@@ -1,6 +1,8 @@
 pub mod auth;
 pub mod borrow_book;
 pub mod find_book;
+pub mod hello;
+pub mod logging;
 pub mod login;
 pub mod return_book;
 pub mod sign_up;

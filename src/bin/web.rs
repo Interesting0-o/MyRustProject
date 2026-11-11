@@ -1,7 +1,8 @@
 use axum::{Router, middleware};
+use book_manager::api::hello;
 use book_manager::api::{
-    AppState, auth::auth_middleware, borrow_book, find_book, login, return_book, sign_up,
-    update_book, update_reader,
+    AppState, auth::auth_middleware, borrow_book, find_book, logging::request_log_middleware,
+    login, return_book, sign_up, update_book, update_reader,
 };
 use book_manager::{
     new_book_table, new_borrow_record_table, new_librarian_table, new_reader_table,
@@ -14,6 +15,8 @@ async fn main() {
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL 未设置");
     let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET 未设置");
+    let backend_url = std::env::var("BACKEND_URL").expect("BACKEND_URL 未设置");
+    let backend_port = std::env::var("BACKEND_PORT").expect("BACKEND_PORT未设置");
     let jwt_expires_secs = match std::env::var("JWT_EXPIRES_SECS") {
         Ok(res) => res.parse::<u64>().expect("JWT_EXPIRES_SECS 字段设置无效"),
         Err(_) => (2 * 60 * 60) as u64,
@@ -52,13 +55,14 @@ async fn main() {
     let app = Router::new()
         .merge(login::router())
         .merge(sign_up::router())
+        .merge(hello::router())
         .merge(app_protect)
+        .layer(middleware::from_fn(request_log_middleware))
         .with_state(state.clone());
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    println!("Server running on http://127.0.0.1:3000");
+    let url = format!("{}:{}", backend_url, backend_port);
+    let listener = tokio::net::TcpListener::bind(&url).await.unwrap();
+    println!("Serve on {}", url);
 
     axum::serve(listener, app).await.unwrap();
 }
